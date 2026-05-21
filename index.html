@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>☕ ניהול לידים</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1e293b; direction: rtl; }
+.header { background: #1e293b; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; position: sticky; top: 0; z-index: 50; }
+.header h1 { color: #fff; font-size: 17px; font-weight: 800; }
+.header p { color: #94a3b8; font-size: 11px; margin-top: 1px; }
+.sync-badge { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.07); border-radius: 8px; padding: 5px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.btn-add { background: #f59e0b; color: #fff; border: none; border-radius: 10px; padding: 9px 16px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.stats { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; padding: 12px 12px 0; }
+.stat-card { background: #fff; border-radius: 10px; padding: 10px 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); text-align: center; cursor: pointer; transition: transform 0.1s; }
+.stat-card:active { transform: scale(0.96); }
+.stat-icon { font-size: 16px; }
+.stat-value { font-size: 20px; font-weight: 800; line-height: 1.2; }
+.stat-label { font-size: 9px; color: #64748b; font-weight: 600; }
+.tabs { padding: 10px 12px 0; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { padding: 7px 13px; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 12px; font-weight: 700; background: transparent; color: #64748b; font-family: inherit; white-space: nowrap; flex-shrink: 0; }
+.tab.active { background: #fff; color: #1e293b; }
+.tab.tab-danger.active { background: #fef2f2; color: #ef4444; }
+.filters { background: #fff; margin: 0 12px; border-radius: 0 12px 12px 12px; padding: 10px 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.filters input, .filters select { border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 7px 10px; font-size: 13px; direction: rtl; outline: none; font-family: inherit; }
+.filters input { flex: 1; min-width: 140px; }
+.count { color: #94a3b8; font-size: 12px; white-space: nowrap; }
+.table-wrap { margin: 0 12px 24px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 0 0 12px 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+th { padding: 9px 12px; text-align: right; font-weight: 700; font-size: 11px; color: #64748b; cursor: pointer; user-select: none; white-space: nowrap; border-bottom: 2px solid #e2e8f0; background: #f8fafc; }
+td { padding: 8px 12px; font-size: 12px; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
+tr:hover td { background: #eff6ff !important; }
+tr:nth-child(even) td { background: #fafbfc; }
+.tr-clickable { cursor: pointer; }
+.owner-badge { border-radius: 12px; padding: 2px 9px; font-size: 11px; font-weight: 700; }
+.status-select { border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 3px 8px; font-size: 12px; font-weight: 700; cursor: pointer; direction: rtl; font-family: inherit; }
+.cards { display: none; padding: 0 12px 24px; flex-direction: column; gap: 10px; }
+.card { background: #fff; border-radius: 12px; padding: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); cursor: pointer; border-right: 4px solid #e2e8f0; }
+.card:active { background: #f8fafc; }
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 8px; }
+.card-company { font-size: 16px; font-weight: 800; color: #1e293b; flex: 1; }
+.card-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 5px; align-items: center; }
+.card-label { font-size: 11px; color: #94a3b8; font-weight: 600; }
+.card-value { font-size: 12px; color: #374151; }
+.card-notes { font-size: 12px; color: #64748b; margin-top: 6px; padding-top: 6px; border-top: 1px solid #f1f5f9; line-height: 1.5; }
+.mobile-status { border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; font-size: 13px; font-weight: 700; cursor: pointer; direction: rtl; font-family: inherit; width: 100%; margin-top: 8px; background: #fff; }
+.empty { text-align: center; padding: 48px 20px; color: #94a3b8; background: #fff; border-radius: 0 0 12px 12px; }
+#modal-wrap { position: fixed; inset: 0; z-index: 200; pointer-events: none; }
+#modal-wrap.open { pointer-events: all; }
+.modal-bg { position: absolute; inset: 0; background: rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.2s; }
+#modal-wrap.open .modal-bg { opacity: 1; }
+.modal-box { position: absolute; bottom: 0; left: 0; right: 0; background: #fff; border-radius: 20px 20px 0 0; padding: 20px 18px 32px; max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch; transform: translateY(100%); transition: transform 0.25s ease; }
+#modal-wrap.open .modal-box { transform: translateY(0); }
+@media (min-width: 600px) {
+  .modal-box { top: 50%; bottom: auto; left: 50%; right: auto; transform: translate(-50%, -40%); width: 580px; max-height: 90vh; border-radius: 16px; opacity: 0; transition: opacity 0.2s, transform 0.2s; }
+  #modal-wrap.open .modal-box { transform: translate(-50%, -50%); opacity: 1; }
+}
+.modal-handle { width: 40px; height: 4px; background: #e2e8f0; border-radius: 2px; margin: 0 auto 16px; }
+@media (min-width: 600px) { .modal-handle { display: none; } }
+.modal-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.modal-title h2 { font-size: 18px; font-weight: 800; }
+.modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #94a3b8; padding: 4px; line-height: 1; }
+.modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+@media (max-width: 600px) { .modal-grid { grid-template-columns: 1fr; } }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 12px; color: #64748b; font-weight: 600; margin-bottom: 4px; }
+.field input, .field select, .field textarea { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 11px 12px; font-size: 16px; direction: rtl; outline: none; font-family: inherit; background: #fff; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: #3b82f6; }
+.field input[type="date"], .field input[type="time"] { direction: ltr; text-align: right; }
+.field textarea { resize: vertical; }
+.modal-btns { display: flex; gap: 10px; margin-top: 16px; }
+.btn-cancel { padding: 13px; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #fff; cursor: pointer; font-size: 15px; color: #64748b; font-family: inherit; flex: 1; }
+.btn-save { padding: 13px; border: none; border-radius: 10px; background: #1e293b; color: #fff; cursor: pointer; font-size: 15px; font-weight: 700; font-family: inherit; flex: 2; }
+.meeting-box { margin-top: 16px; background: #f0f9ff; border-radius: 12px; padding: 14px; border: 1.5px solid #bae6fd; }
+.meeting-box-title { font-weight: 700; font-size: 14px; color: #0369a1; margin-bottom: 12px; }
+.meeting-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+@media (max-width: 600px) { .meeting-grid { grid-template-columns: 1fr; } }
+.cal-btns { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+.btn-gcal { flex: 1; padding: 10px; background: #4285f4; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.btn-ics { flex: 1; padding: 10px; background: #fff; color: #374151; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+@media (max-width: 700px) { .table-wrap { display: none; } .cards { display: flex; } }
+</style>
+</head>
+<body>
+
+<div id="modal-wrap">
+  <div class="modal-bg" onclick="closeModal()"></div>
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      <h2 id="modal-title-text">ליד</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-grid">
+      <div class="field"><label>שם חברה</label><input id="f_company" type="text" autocomplete="off"></div>
+      <div class="field"><label>כמות עובדים</label><input id="f_employees" type="number" inputmode="numeric"></div>
+      <div class="field"><label>מיקום</label><input id="f_location" type="text" autocomplete="off"></div>
+      <div class="field"><label>חיבור</label><input id="f_connection" type="text" autocomplete="off"></div>
+      <div class="field"><label>איש קשר</label><input id="f_contact" type="text" autocomplete="off"></div>
+      <div class="field"><label>תפקיד</label><input id="f_role" type="text" autocomplete="off"></div>
+      <div class="field"><label>טלפון / מייל</label><input id="f_phone" type="text" style="direction:ltr;text-align:right"></div>
+      <div class="field"><label>אחראי</label><select id="f_owner"></select></div>
+    </div>
+    <div class="field"><label>מצב קיים</label><input id="f_currentStatus" type="text" autocomplete="off"></div>
+    <div class="field" style="margin-top:8px"><label>סטטוס</label><select id="f_status" onchange="updateMeetingSection()"></select></div>
+    <div class="field" style="margin-top:8px"><label>הערות</label><textarea id="f_notes" rows="3"></textarea></div>
+    <div class="field" style="margin-top:8px"><label>תאריך עדכון</label><input type="date" id="f_lastUpdated"></div>
+
+    <div id="meeting-section" class="meeting-box" style="display:none">
+      <div class="meeting-box-title">📅 פרטי פגישה</div>
+      <div class="meeting-grid">
+        <div class="field"><label>תאריך פגישה</label><input type="date" id="f_meetingDate"></div>
+        <div class="field"><label>שעה</label><input type="time" id="f_meetingTime" value="09:00"></div>
+      </div>
+      <div class="field"><label>מיקום פגישה</label><input type="text" id="f_meetingLocation" placeholder="משרד הלקוח, זום, וכו׳" autocomplete="off"></div>
+      <div class="field"><label>מייל לזימון (אופציונלי)</label><input type="email" id="f_meetingGuest" placeholder="email@example.com" style="direction:ltr;text-align:right"></div>
+      <div class="cal-btns">
+        <button class="btn-gcal" onclick="openGCal()">📆 פתח ב-Google Calendar</button>
+        <button class="btn-ics" onclick="buildICS()">⬇️ הורד ICS</button>
+      </div>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">ביטול</button>
+      <button class="btn-save" onclick="saveLead()">💾 שמור</button>
+    </div>
+  </div>
+</div>
+
+<div id="app"></div>
+
+<script>
+var DB_URL = "https://mister-bean-default-rtdb.europe-west1.firebasedatabase.app/leads.json";
+
+var STATUS_OPTIONS = [
+  {label:"לא טופל",      color:"#94a3b8", bg:"#f1f5f9"},
+  {label:"ממתין לחיבור", color:"#f59e0b", bg:"#fffbeb"},
+  {label:"נשלחה הצעה",   color:"#3b82f6", bg:"#eff6ff"},
+  {label:"נקבעה פגישה",  color:"#8b5cf6", bg:"#f5f3ff"},
+  {label:"מנוהל",        color:"#10b981", bg:"#ecfdf5"},
+  {label:"לא רלוונטי",   color:"#ef4444", bg:"#fef2f2"},
+  {label:"נסגר",         color:"#059669", bg:"#d1fae5"},
+];
+var OWNERS = ["בועז","בר","בועז/בר","אחר"];
+
+var INITIAL_LEADS = [
+  {id:1,  company:"Wix",                  employees:3000,  location:"",                         connection:"דור מזרחי/דנה כהן",       contact:"רון ביאלה",   role:"מנהל רכש",        phone:"0504707042",                       owner:"בועז",    currentStatus:"בחוזה עם ויזיני ורויאל קפה",                        status:"מנוהל",        lastUpdated:"2026-05-20", notes:"מנוהל ע״י שיפקה. בחורה בשם אילת נציגה של הקייטרינג. בודקים אם מעוניינים לקבל הצעה נוספת", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:2,  company:"EY",                   employees:2000,  location:"",                         connection:"אור סעדה",                 contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:3,  company:"KPMG",                 employees:1500,  location:"",                         connection:"מאיה אשרי לינק דין יעל",  contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:4,  company:"Cyera",                employees:400,   location:"אוסוולדו 24 תל אביב",     connection:"אורון חבר של יעל",        contact:"לי פינחס",    role:"",                 phone:"0528088233",                       owner:"בועז",    currentStatus:"חוזה עם צ׳ופציק לקפה ומכונות. רוצים להחליף קפה",   status:"ממתין לחיבור", lastUpdated:"2026-05-22", notes:"לי יוצאת לחופשת לידה ומחברת אותנו למחליף שלה. רוצים הצעת מחיר. משלמים סביב 95 ש״ח לקילו", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:5,  company:"Natural Intelligence", employees:500,   location:"",                         connection:"קהלת",                    contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:6,  company:"Apple",                employees:2000,  location:"",                         connection:"סטופל",                   contact:"רעות",        role:"מנהלת פסיליטיז",  phone:"",                                 owner:"בועז",    currentStatus:"", status:"ממתין לחיבור", lastUpdated:"2026-05-19", notes:"שלחתי לה הודעה במייל וטרם ענתה. לנסות להגיע גבוה יותר", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:7,  company:"PayPal",               employees:350,   location:"",                         connection:"וינר חבר של נוה",         contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:8,  company:"Deloitte",             employees:2000,  location:"",                         connection:"ראם",                     contact:"ראם",         role:"COS",              phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:9,  company:"Wiz",                  employees:450,   location:"",                         connection:"טל שמיר / גיא וייס",      contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:10, company:"SanDisk",              employees:700,   location:"",                         connection:"רועי פרץ",                contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:11, company:"Amdocs",               employees:5000,  location:"",                         connection:"רועי פרץ / גיסה של עדי",  contact:"אורן שני",    role:"",                 phone:"",                                 owner:"בועז/בר", currentStatus:"הוחלף ספק לאחרונה", status:"ממתין לחיבור", lastUpdated:"2026-05-19", notes:"לנסות להגיע לאורן בדרך אחרת", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:12, company:"Playtika",             employees:800,   location:"",                         connection:"איתמר",                   contact:"שירית סמול",  role:"מנהלת רווחת עובד",phone:"+972 52-375-9839",                owner:"בועז",    currentStatus:"מנוהל ע״י חברת הסעדה נרזין סלע. יש קפה ומכונות.", status:"ממתין לחיבור", lastUpdated:"2026-05-19", notes:"שירית העבירה את ההודעה לנרזין. לעשות פולואפ", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:13, company:"Microsoft",            employees:2700,  location:"",                         connection:"תומר סולומון",            contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"נסגר לאחרונה מכרז מול קייטרינג", status:"ממתין לחיבור", lastUpdated:"2026-05-19", notes:"לבדוק דחוף", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:14, company:"לברר בראשון",          employees:400,   location:"",                         connection:"נטע",                     contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:15, company:"PwC",                  employees:1400,  location:"",                         connection:"",                        contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:16, company:"Check Point",          employees:1900,  location:"",                         connection:"",                        contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:17, company:"Intel",                employees:8000,  location:"",                         connection:"אור גטז",                 contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:18, company:"CyberArk",             employees:1200,  location:"",                         connection:"",                        contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:19, company:"NVIDIA",               employees:6000,  location:"",                         connection:"יובל דורי / עידו צמח",    contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:20, company:"Meta",                 employees:800,   location:"",                         connection:"",                        contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:21, company:"Monday",               employees:1400,  location:"",                         connection:"ניצן כספי",               contact:"איתמר",       role:"מנהל רכש",         phone:"0505583103",                       owner:"בועז",    currentStatus:"בחוזה מול גילמן קפה", status:"נקבעה פגישה", lastUpdated:"2026-05-20", notes:"נקבעה פגישה", sheet:"ראשוני", meetingDate:"", meetingTime:"09:00", meetingLocation:"", meetingGuest:""},
+  {id:22, company:"משרד עו\"ד גורניצקי",  employees:400,   location:"",                         connection:"חיים פרידלנד",            contact:"יאן",         role:"מנהל רכש",         phone:"0547203042",                       owner:"בועז",    currentStatus:"מכונות ופולי קפה של שטראוס, חוזה לעוד שנה וחצי", status:"ממתין לחיבור", lastUpdated:"2026-05-19", notes:"להדק ולשלוח הצעת מחיר", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:23, company:"משרד עו\"ד מיתר",      employees:600,   location:"",                         connection:"אורי שכן",                contact:"",            role:"",                 phone:"",                                 owner:"בועז",    currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"להתקשר למשרד", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:24, company:"משרד עו\"ד הרצוג",     employees:500,   location:"",                         connection:"איריס",                   contact:"ניר פיק",     role:"מנהל רכש",         phone:"",                                 owner:"בועז",    currentStatus:"", status:"ממתין לחיבור", lastUpdated:"2026-05-20", notes:"בדיוק סגרו ספק. לבדוק עוד חודש אם ניר לא חזר", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:25, company:"משרד עו\"ד ש.הורוביץ", employees:300,  location:"",                         connection:"בני שפר",                 contact:"",            role:"",                 phone:"",                                 owner:"בועז",    currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"ערן יעשה חיבור אחרי לקוח ראשון", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:26, company:"משרד עו\"ד נשיץ",      employees:300,   location:"",                         connection:"יוני פויכטפונגר",         contact:"",            role:"",                 phone:"",                                 owner:"בועז",    currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"ערן יעשה חיבור אחרי לקוח ראשון", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:27, company:"משרד עו\"ד APM",       employees:250,   location:"",                         connection:"",                        contact:"",            role:"",                 phone:"",                                 owner:"בועז",    currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"ערן יעשה חיבור אחרי לקוח ראשון", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:28, company:"קבוצת מאיר",          employees:5000,  location:"",                         connection:"",                        contact:"",            role:"",                 phone:"",                                 owner:"בועז",    currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:29, company:"כלל ביטוח",           employees:4000,  location:"",                         connection:"",                        contact:"",            role:"",                 phone:"",                                 owner:"בועז",    currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:30, company:"מקס אשראי",           employees:1800,  location:"",                         connection:"",                        contact:"",            role:"",                 phone:"",                                 owner:"בועז",    currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:31, company:"הראל ביטוח",          employees:5000,  location:"",                         connection:"",                        contact:"",            role:"",                 phone:"",                                 owner:"בועז",    currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:32, company:"בנק מזרחי",           employees:4000,  location:"לוד",                      connection:"גיא לקסמן",               contact:"תרי",         role:"סמנכלית שיווק",    phone:"",                                 owner:"בועז",    currentStatus:"ככל הנראה בחוזה שנחתם לאחרונה", status:"ממתין לחיבור", lastUpdated:"2026-05-19", notes:"לבדוק שוב בקרוב", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:33, company:"תדהר",                employees:700,   location:"רעננה",                    connection:"רועי גרינברג",            contact:"רותם",        role:"מנהלת משרד",       phone:"",                                 owner:"בועז",    currentStatus:"משמשים בקפסולות, ניסו בעבר להכניס פולים ללא הצלחה", status:"לא רלוונטי", lastUpdated:"2026-05-21", notes:"ההנהלה לא מעוניינת. לנסות להגיע למישהו אחר בארגון", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:34, company:"R2M",                 employees:0,     location:"",                         connection:"ארבל",                    contact:"",            role:"",                 phone:"",                                 owner:"בועז",    currentStatus:"", status:"ממתין לחיבור", lastUpdated:"2026-05-21", notes:"ממתין לקבלת איש קשר בחברה", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:35, company:"נתע",                 employees:400,   location:"תל אביב",                  connection:"ניב וונדי",               contact:"",            role:"",                 phone:"",                                 owner:"בועז",    currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:36, company:"הפניקס",              employees:0,     location:"",                         connection:"",                        contact:"",            role:"",                 phone:"",                                 owner:"בועז",    currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:37, company:"PassportCard",        employees:0,     location:"נתניה",                    connection:"דנה קצף",                 contact:"אלירז רייבי", role:"מנהל רכש/משרד",   phone:"Eliraz.rabiei@passportcard.co.il", owner:"בועז",    currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:38, company:"Regus",               employees:0,     location:"מתחמי עבודה",              connection:"",                        contact:"",            role:"",                 phone:"",                                 owner:"בועז",    currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:39, company:"Mixer",               employees:0,     location:"מתחמי עבודה",              connection:"עידו ששון",               contact:"דרור",        role:"שותף",             phone:"",                                 owner:"בועז",    currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"להתקשר לדרור", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:40, company:"SolarEdge",           employees:0,     location:"",                         connection:"עידו ששון",               contact:"",            role:"",                 phone:"",                                 owner:"בועז",    currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:41, company:"שיכון ובינוי",        employees:0,     location:"",                         connection:"",                        contact:"",            role:"",                 phone:"MODIN_B@shikunbinui.com",          owner:"בועז",    currentStatus:"", status:"ממתין לחיבור", lastUpdated:"2026-05-20", notes:"שלחתי מייל", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:42, company:"Feed Your Mind",      employees:0,     location:"חברת קייטרינג לעסקים",    connection:"",                        contact:"הגר",         role:"מנהלת פיתוח עסקי",phone:"",                                 owner:"בועז",    currentStatus:"", status:"ממתין לחיבור", lastUpdated:"2026-05-20", notes:"שלחתי הודעה להגר, היא מעבירה לגורם הרלוונטי", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:43, company:"Google",              employees:2000,  location:"תל אביב - מגדל אלקטרה",   connection:"",                        contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:44, company:"Waze",                employees:500,   location:"תל אביב",                  connection:"",                        contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:45, company:"Payoneer",            employees:1000,  location:"פ״ת",                      connection:"",                        contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:46, company:"מלגם",               employees:11000, location:"מטה בפ״ת",                 connection:"",                        contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:47, company:"Taboola",             employees:700,   location:"בורסה",                    connection:"",                        contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:48, company:"SAP",                 employees:1000,  location:"רעננה + חיפה",             connection:"",                        contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:49, company:"IBM",                 employees:2000,  location:"פ״ת",                      connection:"",                        contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:50, company:"HP",                  employees:2500,  location:"נס ציונה + נתניה + קרית גת",connection:"",                      contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:51, company:"Dell",                employees:1000,  location:"גליל ים",                  connection:"",                        contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:52, company:"מימי ונונו",          employees:0,     location:"",                         connection:"שקד",                     contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"לא טופל",      lastUpdated:"2026-05-19", notes:"", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:53, company:"מייטרוניקס",          employees:0,     location:"יזרעאל",                   connection:"סער הכט",                 contact:"",            role:"",                 phone:"",                                 owner:"בר",      currentStatus:"", status:"ממתין לחיבור", lastUpdated:"2026-05-19", notes:"סער עובד על לחבר אותנו שם", sheet:"ראשוני", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:54, company:"סטמפלי",             employees:90,    location:"מידטאון תל אביב",          connection:"",                        contact:"אליה חגיגי",  role:"מנהלת משרד",       phone:"",                                 owner:"בועז",    currentStatus:"מעוניינים להחליף ספק", status:"נשלחה הצעה", lastUpdated:"2026-05-21", notes:"", sheet:"מתקדם", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""},
+  {id:55, company:"ewave נדלן",          employees:150,   location:"תל אביב",                  connection:"קרן סינגר",               contact:"",            role:"",                 phone:"",                                 owner:"בועז",    currentStatus:"חברה קטנה. קונים קפה זול מאוד", status:"לא רלוונטי", lastUpdated:"2026-05-19", notes:"לא מוכנים לעלות במחיר", sheet:"לא רלוונטי", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""}
+];
+
+var leads=[], activeTab="כל הלידים", filterStatus="הכל", filterOwner="הכל", search="", sortKey="company", sortDir="asc", syncStatus="idle", lastSync=null, currentLead=null, isAdding=false, statFilter=null;
+
+function fbRead(){ return fetch(DB_URL+"?t="+Date.now()).then(function(r){if(!r.ok)throw 0;return r.json();}); }
+function fbWrite(d){ return fetch(DB_URL,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)}).then(function(r){if(!r.ok)throw 0;}); }
+
+function saveLeads(nl){
+  leads=nl; syncStatus="syncing"; updateBadge();
+  fbWrite(nl).then(function(){ lastSync=new Date(); syncStatus="ok"; updateBadge(); }).catch(function(){ syncStatus="error"; updateBadge(); });
+}
+
+function updateBadge(){
+  var b=document.getElementById("sync-badge"); if(!b)return;
+  var ic={idle:"⏳",syncing:"🔄",ok:"✅",error:"❌"};
+  var cl={idle:"#94a3b8",syncing:"#f59e0b",ok:"#10b981",error:"#ef4444"};
+  var lb={idle:"ממתין",syncing:"שומר...",ok:lastSync?("עודכן "+lastSync.toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})):"מסונכרן",error:"שגיאה"};
+  b.style.color=cl[syncStatus]; b.innerHTML=ic[syncStatus]+" "+lb[syncStatus];
+}
+
+function init(){
+  fbRead().then(function(d){
+    leads=(d&&Array.isArray(d)&&d.length>0)?d:INITIAL_LEADS;
+    if(!(d&&Array.isArray(d)&&d.length>0)) fbWrite(INITIAL_LEADS);
+    lastSync=new Date(); syncStatus="ok"; render();
+  }).catch(function(){ leads=INITIAL_LEADS; syncStatus="error"; render(); });
+  setInterval(function(){
+    fbRead().then(function(d){ if(d&&Array.isArray(d)){leads=d;lastSync=new Date();syncStatus="ok"; render(); } }).catch(function(){ syncStatus="error"; updateBadge(); });
+  },15000);
+}
+
+function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+function fmtDate(d){ return d?d.split("-").reverse().join("/"):"—"; }
+function sOpt(s){ return STATUS_OPTIONS.filter(function(x){return x.label===s;})[0]||STATUS_OPTIONS[0]; }
+function ownerStyle(o){ if(o==="בועז")return"background:#dbeafe;color:#1d4ed8"; if(o==="בר")return"background:#dcfce7;color:#15803d"; return"background:#fef3c7;color:#92400e"; }
+
+function getFiltered(){
+  return leads.filter(function(l){
+    if(activeTab==="לא רלוונטי"&&l.status!=="לא רלוונטי")return false;
+    if(activeTab!=="לא רלוונטי"&&activeTab!=="כל הלידים"&&l.status==="לא רלוונטי")return false;
+    if(activeTab==="נסגר"&&l.status!=="נסגר")return false;
+    if(activeTab==="מתקדם"&&l.sheet!=="מתקדם")return false;
+    if(activeTab==="ראשוני"&&l.sheet!=="ראשוני")return false;
+    if(statFilter&&l.status!==statFilter)return false;
+    if(filterStatus!=="הכל"&&l.status!==filterStatus)return false;
+    if(filterOwner!=="הכל"&&l.owner!==filterOwner)return false;
+    if(search){var q=search.toLowerCase();return[l.company,l.contact,l.connection,l.phone,l.notes,l.location].some(function(v){return(v||"").toLowerCase().indexOf(q)>=0;});}
+    return true;
+  }).sort(function(a,b){
+    var av=a[sortKey]||"",bv=b[sortKey]||"";
+    if(sortKey==="employees"){av=Number(av);bv=Number(bv);}
+    return sortDir==="asc"?(av>bv?1:-1):(av<bv?1:-1);
+  });
+}
+
+function render(){
+  var filtered=getFiltered();
+  var irr=leads.filter(function(l){return l.status==="לא רלוונטי";}).length;
+  var statsData=[
+    {label:"סה״כ לידים",    value:leads.filter(function(l){return l.status!=="לא רלוונטי";}).length,      color:"#3b82f6", icon:"📋", filter:null},
+    {label:"ממתין לחיבור", value:leads.filter(function(l){return l.status==="ממתין לחיבור";}).length,    color:"#f59e0b", icon:"⏳", filter:"ממתין לחיבור"},
+    {label:"פגישות",        value:leads.filter(function(l){return l.status==="נקבעה פגישה";}).length,    color:"#8b5cf6", icon:"📅", filter:"נקבעה פגישה"},
+    {label:"הצעות",         value:leads.filter(function(l){return l.status==="נשלחה הצעה";}).length,     color:"#3b82f6", icon:"📨", filter:"נשלחה הצעה"},
+    {label:"נסגרו",         value:leads.filter(function(l){return l.status==="נסגר";}).length,           color:"#059669", icon:"🏆", filter:"נסגר"},
+  ];
+  var tabs=["כל הלידים","ראשוני","מתקדם","נסגר","לא רלוונטי"];
+
+  var statsHTML=statsData.map(function(s){
+    var active=statFilter===s.filter&&s.filter?'style="border-top:3px solid '+s.color+';box-shadow:0 0 0 2px '+s.color+'"':'style="border-top:3px solid '+s.color+'"';
+    return '<div class="stat-card" '+active+' onclick="toggleStatFilter(\''+s.filter+'\')">'
+      +'<div class="stat-icon">'+s.icon+'</div>'
+      +'<div class="stat-value" style="color:'+s.color+'">'+s.value+'</div>'
+      +'<div class="stat-label">'+s.label+'</div>'
+      +'</div>';
+  }).join("");
+
+  var tabsHTML=tabs.map(function(t){
+    var cls="tab"+(activeTab===t?" active":"")+(t==="לא רלוונטי"?" tab-danger":"");
+    var badge=(t==="לא רלוונטי"&&irr>0)?(' <span style="background:#ef4444;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px">'+irr+"</span>"):"";
+    return '<button class="'+cls+'" onclick="setTab(\''+t+'\')">'+t+badge+'</button>';
+  }).join("");
+
+  var thHTML=[["company","חברה"],["employees","עובדים"],["location","מיקום"],["connection","חיבור"],["contact","איש קשר"],["role","תפקיד"],["phone","טלפון"],["owner","אחראי"],["status","סטטוס"],["lastUpdated","תאריך"]].map(function(kl){
+    return '<th onclick="setSort(\''+kl[0]+'\')">'+kl[1]+(sortKey===kl[0]?(sortDir==="asc"?" ↑":" ↓"):"")+'</th>';
+  }).join("")+'<th>הערות</th>';
+
+  var rowsHTML=filtered.length===0?'<tr><td colspan="11"><div class="empty">לא נמצאו לידים</div></td></tr>':filtered.map(function(l){
+    var so=sOpt(l.status);
+    var opts=STATUS_OPTIONS.map(function(s){return '<option'+(l.status===s.label?" selected":"")+'>'+s.label+'</option>';}).join("");
+    return '<tr class="tr-clickable" onclick="openEdit('+l.id+')">'
+      +'<td style="font-weight:700">'+esc(l.company)+'</td>'
+      +'<td style="color:#64748b">'+(l.employees>0?Number(l.employees).toLocaleString():"—")+'</td>'
+      +'<td style="color:#64748b;max-width:100px;overflow:hidden;text-overflow:ellipsis">'+(esc(l.location)||"—")+'</td>'
+      +'<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis">'+(esc(l.connection)||"—")+'</td>'
+      +'<td>'+(esc(l.contact)||"—")+'</td>'
+      +'<td style="color:#64748b">'+(esc(l.role)||"—")+'</td>'
+      +'<td style="direction:ltr;text-align:right">'+(esc(l.phone)||"—")+'</td>'
+      +'<td><span class="owner-badge" style="'+ownerStyle(l.owner)+'">'+esc(l.owner)+'</span></td>'
+      +'<td onclick="event.stopPropagation()"><select class="status-select" style="color:'+so.color+';background:'+so.bg+'" onchange="updateStatus('+l.id+',this.value)">'+opts+'</select></td>'
+      +'<td style="color:#64748b;font-size:11px">'+fmtDate(l.lastUpdated)+'</td>'
+      +'<td style="color:#64748b;max-width:180px;overflow:hidden;text-overflow:ellipsis">'+(esc(l.notes)||"—")+'</td>'
+      +'</tr>';
+  }).join("");
+
+  var cardsHTML=filtered.length===0?'<div class="empty">לא נמצאו לידים</div>':filtered.map(function(l){
+    var so=sOpt(l.status);
+    var opts=STATUS_OPTIONS.map(function(s){return '<option'+(l.status===s.label?" selected":"")+'>'+s.label+'</option>';}).join("");
+    var extra="";
+    if(l.employees>0||l.location) extra+='<div class="card-row">'+(l.employees>0?'<span class="card-label">עובדים:</span><span class="card-value">'+Number(l.employees).toLocaleString()+'</span>':"")+(l.location?'<span class="card-label" style="margin-right:8px">📍</span><span class="card-value">'+esc(l.location)+"</span>":"")+"</div>";
+    if(l.contact) extra+='<div class="card-row"><span class="card-label">איש קשר:</span><span class="card-value">'+esc(l.contact)+(l.role?" — "+esc(l.role):"")+"</span></div>";
+    if(l.connection) extra+='<div class="card-row"><span class="card-label">חיבור:</span><span class="card-value">'+esc(l.connection)+"</span></div>";
+    if(l.phone) extra+='<div class="card-row"><span class="card-label">📞</span><span class="card-value" style="direction:ltr">'+esc(l.phone)+"</span></div>";
+    if(l.meetingDate&&l.status==="נקבעה פגישה") extra+='<div class="card-row"><span class="card-label">📅 פגישה:</span><span class="card-value">'+fmtDate(l.meetingDate)+(l.meetingTime?" "+l.meetingTime:"")+(l.meetingLocation?" • "+esc(l.meetingLocation):"")+"</span></div>";
+    return '<div class="card" style="border-right-color:'+so.color+'" onclick="openEdit('+l.id+')">'
+      +'<div class="card-header"><div class="card-company">'+esc(l.company)+'</div><span class="owner-badge" style="'+ownerStyle(l.owner)+'">'+esc(l.owner)+'</span></div>'
+      +extra
+      +'<div onclick="event.stopPropagation()"><select class="mobile-status" style="color:'+so.color+';background:'+so.bg+'" onchange="updateStatus('+l.id+',this.value)">'+opts+'</select></div>'
+      +(l.notes?'<div class="card-notes">📝 '+esc(l.notes)+'</div>':"")
+      +'<div style="font-size:11px;color:#94a3b8;margin-top:6px">'+fmtDate(l.lastUpdated)+'</div>'
+      +'</div>';
+  }).join("");
+
+  var syncLabel=lastSync?("עודכן "+lastSync.toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})):"מסונכרן";
+
+  document.getElementById("app").innerHTML=
+    '<div class="header">'
+      +'<div><h1>☕ ניהול לידים</h1><p>🔥 מסונכרן בזמן אמת</p></div>'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<div class="sync-badge" id="sync-badge" style="color:#10b981">✅ '+syncLabel+'</div>'
+        +'<button class="btn-add" onclick="openAdd()">+ ליד</button>'
+      +'</div>'
+    +'</div>'
+    +'<div class="stats">'+statsHTML+'</div>'
+    +'<div class="tabs">'+tabsHTML+'</div>'
+    +'<div class="filters">'
+      +'<input placeholder="🔍 חיפוש..." value="'+esc(search)+'" oninput="setSearch(this.value)">'
+      +'<select onchange="setFilterStatus(this.value)">'
+        +'<option'+(filterStatus==="הכל"?" selected":"")+'>הכל</option>'
+        +STATUS_OPTIONS.map(function(s){return '<option'+(filterStatus===s.label?" selected":"")+'>'+ s.label+'</option>';}).join("")
+      +'</select>'
+      +'<select onchange="setFilterOwner(this.value)">'
+        +'<option'+(filterOwner==="הכל"?" selected":"")+'>הכל</option>'
+        +OWNERS.map(function(o){return '<option'+(filterOwner===o?" selected":"")+'>'+o+'</option>';}).join("")
+      +'</select>'
+      +'<span class="count">'+filtered.length+' לידים'+(statFilter?" • "+statFilter:"")+'</span>'
+    +'</div>'
+    +'<div class="table-wrap"><table><thead><tr>'+thHTML+'</tr></thead><tbody>'+rowsHTML+'</tbody></table></div>'
+    +'<div class="cards">'+cardsHTML+'</div>';
+}
+
+function setTab(t){ activeTab=t; statFilter=null; render(); }
+function setSearch(v){ search=v; render(); }
+function setFilterStatus(v){ filterStatus=v; render(); }
+function setFilterOwner(v){ filterOwner=v; render(); }
+function setSort(k){ if(sortKey===k)sortDir=sortDir==="asc"?"desc":"asc"; else{sortKey=k;sortDir="asc";} render(); }
+function toggleStatFilter(f){
+  statFilter=(statFilter===f)?null:f;
+  if(f) activeTab="כל הלידים";
+  render();
+}
+
+function populateSelects(){
+  var os=document.getElementById("f_owner");
+  var ss=document.getElementById("f_status");
+  if(os) os.innerHTML=OWNERS.map(function(o){return '<option>'+o+'</option>';}).join("");
+  if(ss) ss.innerHTML=STATUS_OPTIONS.map(function(s){return '<option>'+s.label+'</option>';}).join("");
+}
+
+function updateMeetingSection(){
+  var s=document.getElementById("f_status");
+  var sec=document.getElementById("meeting-section");
+  if(!s||!sec)return;
+  sec.style.display=(s.value==="נקבעה פגישה")?"block":"none";
+}
+
+function g(id){ return (document.getElementById(id)||{}).value||""; }
+
+function openEdit(id){
+  var l=null;
+  for(var i=0;i<leads.length;i++){if(leads[i].id===id){l=leads[i];break;}}
+  if(!l)return;
+  currentLead=Object.assign({},l); isAdding=false;
+  populateSelects();
+  document.getElementById("modal-title-text").textContent=l.company||"ליד";
+  document.getElementById("f_company").value=l.company||"";
+  document.getElementById("f_employees").value=l.employees||"";
+  document.getElementById("f_location").value=l.location||"";
+  document.getElementById("f_connection").value=l.connection||"";
+  document.getElementById("f_contact").value=l.contact||"";
+  document.getElementById("f_role").value=l.role||"";
+  document.getElementById("f_phone").value=l.phone||"";
+  document.getElementById("f_owner").value=l.owner||"בועז";
+  document.getElementById("f_currentStatus").value=l.currentStatus||"";
+  document.getElementById("f_status").value=l.status||"לא טופל";
+  document.getElementById("f_notes").value=l.notes||"";
+  document.getElementById("f_lastUpdated").value=l.lastUpdated||new Date().toISOString().split("T")[0];
+  document.getElementById("f_meetingDate").value=l.meetingDate||"";
+  document.getElementById("f_meetingTime").value=l.meetingTime||"09:00";
+  document.getElementById("f_meetingLocation").value=l.meetingLocation||"";
+  document.getElementById("f_meetingGuest").value=l.meetingGuest||"";
+  updateMeetingSection();
+  document.getElementById("modal-wrap").classList.add("open");
+  document.body.style.overflow="hidden";
+}
+
+function openAdd(){
+  currentLead={id:0,company:"",employees:0,location:"",connection:"",contact:"",role:"",phone:"",owner:"בועז",currentStatus:"",status:"לא טופל",notes:"",sheet:"ראשוני",lastUpdated:new Date().toISOString().split("T")[0],meetingDate:"",meetingTime:"09:00",meetingLocation:"",meetingGuest:""};
+  isAdding=true;
+  populateSelects();
+  document.getElementById("modal-title-text").textContent="ליד חדש";
+  ["company","location","connection","contact","role","phone","currentStatus","notes","meetingLocation","meetingGuest"].forEach(function(k){document.getElementById("f_"+k).value="";});
+  document.getElementById("f_employees").value="";
+  document.getElementById("f_owner").value="בועז";
+  document.getElementById("f_status").value="לא טופל";
+  document.getElementById("f_lastUpdated").value=new Date().toISOString().split("T")[0];
+  document.getElementById("f_meetingDate").value="";
+  document.getElementById("f_meetingTime").value="09:00";
+  updateMeetingSection();
+  document.getElementById("modal-wrap").classList.add("open");
+  document.body.style.overflow="hidden";
+}
+
+function closeModal(){
+  document.getElementById("modal-wrap").classList.remove("open");
+  document.body.style.overflow="";
+  currentLead=null; isAdding=false;
+}
+
+function saveLead(){
+  var updated=Object.assign({},currentLead,{
+    company:g("f_company"), employees:Number(g("f_employees"))||0,
+    location:g("f_location"), connection:g("f_connection"),
+    contact:g("f_contact"), role:g("f_role"), phone:g("f_phone"),
+    owner:g("f_owner"), currentStatus:g("f_currentStatus"),
+    status:g("f_status"), notes:g("f_notes"), lastUpdated:g("f_lastUpdated"),
+    meetingDate:g("f_meetingDate"), meetingTime:g("f_meetingTime"),
+    meetingLocation:g("f_meetingLocation"), meetingGuest:g("f_meetingGuest")
+  });
+  closeModal();
+  var nl;
+  if(isAdding){updated.id=Date.now();nl=leads.concat([updated]);}
+  else{nl=leads.map(function(l){return l.id===updated.id?updated:l;});}
+  saveLeads(nl);
+}
+
+function updateStatus(id,status){
+  var nl=leads.map(function(l){return l.id===id?Object.assign({},l,{status:status,lastUpdated:new Date().toISOString().split("T")[0]}):l;});
+  saveLeads(nl);
+  if(status==="לא רלוונטי"&&activeTab!=="לא רלוונטי"){
+    setTimeout(function(){activeTab="לא רלוונטי";render();},400);
+  }
+}
+
+function buildGCalLink(){
+  var company=g("f_company"), date=g("f_meetingDate"), time=g("f_meetingTime")||"09:00", loc=g("f_meetingLocation"), guest=g("f_meetingGuest");
+  if(!date)return null;
+  var parts=date.split("-"), tparts=time.split(":");
+  var y=parts[0],m=parts[1],d=parts[2],h=tparts[0],min=tparts[1]||"00";
+  var pad=function(n){return String(n).padStart(2,"0");};
+  var start=y+m+d+"T"+pad(h)+pad(min)+"00";
+  var endH=String((parseInt(h)+1)%24).padStart(2,"0");
+  var end=y+m+d+"T"+endH+pad(min)+"00";
+  return "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent("פגישה — "+company)+"&dates="+start+"/"+end+"&location="+encodeURIComponent(loc)+"&add="+encodeURIComponent(guest)+"&sf=true&output=xml";
+}
+
+function openGCal(){
+  var link=buildGCalLink();
+  if(!link){alert("נא להזין תאריך לפגישה");return;}
+  window.open(link,"_blank");
+}
+
+function buildICS(){
+  var company=g("f_company")||"פגישה", date=g("f_meetingDate"), time=g("f_meetingTime")||"09:00", loc=g("f_meetingLocation"), guest=g("f_meetingGuest");
+  if(!date){alert("נא להזין תאריך לפגישה");return;}
+  var parts=date.split("-"), tparts=time.split(":");
+  var y=parts[0],m=parts[1],d=parts[2],h=tparts[0],min=tparts[1]||"00";
+  var pad=function(n){return String(n).padStart(2,"0");};
+  var start=y+m+d+"T"+pad(h)+pad(min)+"00";
+  var endH=String((parseInt(h)+1)%24).padStart(2,"0");
+  var end=y+m+d+"T"+endH+pad(min)+"00";
+  var attendee=guest?"ATTENDEE;RSVP=TRUE:mailto:"+guest+"\n":"";
+  var ics="BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nUID:"+Date.now()+"@leads\nSUMMARY:פגישה — "+company+"\nDTSTART:"+start+"\nDTEND:"+end+"\nLOCATION:"+loc+"\n"+attendee+"END:VEVENT\nEND:VCALENDAR";
+  var blob=new Blob([ics],{type:"text/calendar"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="פגישה-"+company+".ics";
+  a.click();
+}
+
+populateSelects();
+init();
+</script>
+</body>
+</html>
