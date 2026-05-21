@@ -88,11 +88,7 @@ html, body {
   overscroll-behavior: none;
 }
 
-body.modal-open {
-  position: fixed;
-  width: 100%;
-  overflow: hidden;
-}
+body.modal-open { overflow: hidden; }
 
 #modal-wrap {
   height: 100dvh;
@@ -146,6 +142,26 @@ body.modal-open {
 .btn-tool { background: rgba(255,255,255,0.10); color: #fff; border: 1px solid rgba(255,255,255,0.18); border-radius: 10px; padding: 9px 12px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .btn-tool:active { transform: scale(0.98); }
 @media (max-width: 700px) { .header-actions { flex-wrap: wrap; justify-content: flex-end; gap: 6px !important; } .btn-tool { padding: 8px 9px; font-size: 12px; } }
+
+
+/* Stability fix for mobile typing */
+@media (max-width: 600px) {
+  #modal-wrap.open .modal-box {
+    transform: translateY(0);
+  }
+
+  .modal-box {
+    will-change: auto;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+
+  .field input,
+  .field textarea,
+  .field select {
+    scroll-margin-bottom: 180px;
+  }
+}
 
 </style>
 </head>
@@ -272,7 +288,7 @@ var INITIAL_LEADS = [
   {id:55, company:"ewave נדלן",          employees:150,   location:"תל אביב",                  connection:"קרן סינגר",               contact:"",            role:"",                 phone:"",                                 owner:"בועז",    currentStatus:"חברה קטנה. קונים קפה זול מאוד", status:"לא רלוונטי", lastUpdated:"2026-05-19", notes:"לא מוכנים לעלות במחיר", sheet:"לא רלוונטי", meetingDate:"", meetingTime:"", meetingLocation:"", meetingGuest:""}
 ];
 
-var leads=[], activeTab="כל הלידים", filterStatus="הכל", filterOwner="הכל", search="", sortKey="company", sortDir="asc", syncStatus="idle", lastSync=null, currentLead=null, isAdding=false, statFilter=null, searchTimer=null, savedScrollY=0;
+var leads=[], activeTab="כל הלידים", filterStatus="הכל", filterOwner="הכל", search="", sortKey="company", sortDir="asc", syncStatus="idle", lastSync=null, currentLead=null, isAdding=false, statFilter=null, searchTimer=null, savedScrollY=0, keepSearchFocus=false, keepSearchSelectionStart=0, keepSearchSelectionEnd=0;
 
 function fbRead(){ return fetch(DB_URL+"?t="+Date.now()).then(function(r){if(!r.ok)throw 0;return r.json();}); }
 function fbWrite(d){ return fetch(DB_URL,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)}).then(function(r){if(!r.ok)throw 0;}); }
@@ -346,14 +362,14 @@ function init(){
     var active=document.activeElement;
     var typing=active&&["INPUT","TEXTAREA","SELECT"].indexOf(active.tagName)>=0;
 
-    if(modalOpen||typing){
-      return;
-    }
+    // Never refresh the app while the user is editing or typing.
+    // This prevents keyboard closing, cursor loss and modal jumps.
+    if(modalOpen||typing) return;
 
     fbRead().then(function(d){
       if(d&&Array.isArray(d)){
-        leads=normalizeLeadsList(d);
-        saveLocalBackup(leads);
+        leads=typeof normalizeLeadsList==="function"?normalizeLeadsList(d):d;
+        if(typeof saveLocalBackup==="function") saveLocalBackup(leads);
         lastSync=new Date();
         syncStatus="ok";
         render();
@@ -388,6 +404,40 @@ function normalizeLead(l){
 }
 function normalizeLeadsList(arr){
   return (Array.isArray(arr)?arr:[]).map(function(l){return normalizeLead(l);});
+}
+
+
+function preserveSearchFocusBeforeRender(){
+  var active=document.activeElement;
+  if(active && active.id==="search-box"){
+    keepSearchFocus=true;
+    try {
+      keepSearchSelectionStart=active.selectionStart || String(active.value||"").length;
+      keepSearchSelectionEnd=active.selectionEnd || keepSearchSelectionStart;
+    } catch(e) {
+      keepSearchSelectionStart=String(active.value||"").length;
+      keepSearchSelectionEnd=keepSearchSelectionStart;
+    }
+  }
+}
+
+function restoreSearchFocusAfterRender(){
+  if(!keepSearchFocus) return;
+  var input=document.getElementById("search-box");
+  if(!input) {
+    keepSearchFocus=false;
+    return;
+  }
+
+  input.focus({preventScroll:true});
+  try {
+    var len=String(input.value||"").length;
+    var start=Math.min(keepSearchSelectionStart,len);
+    var end=Math.min(keepSearchSelectionEnd,len);
+    input.setSelectionRange(start,end);
+  } catch(e) {}
+
+  keepSearchFocus=false;
 }
 
 function getFiltered(){
@@ -432,6 +482,7 @@ function getFiltered(){
 }
 
 function render(){
+  preserveSearchFocusBeforeRender();
   var filtered=getFiltered();
   var irr=leads.filter(function(l){return !l.deleted && l.status==="לא רלוונטי";}).length;
   var deletedCount=leads.filter(function(l){return l.deleted;}).length;
@@ -519,7 +570,7 @@ function render(){
     +'<div class="stats">'+statsHTML+'</div>'
     +'<div class="tabs">'+tabsHTML+'</div>'
     +'<div class="filters">'
-      +'<input placeholder="🔍 חיפוש..." value="'+esc(search)+'" oninput="setSearch(this.value)">'
+      +'<input id="search-box" placeholder="🔍 חיפוש..." value="'+esc(search)+'" oninput="setSearch(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">'
       +'<select onchange="setFilterStatus(this.value)">'
         +'<option'+(filterStatus==="הכל"?" selected":"")+'>הכל</option>'
         +STATUS_OPTIONS.map(function(s){return '<option'+(filterStatus===s.label?" selected":"")+'>'+ s.label+'</option>';}).join("")
@@ -532,17 +583,29 @@ function render(){
     +'</div>'
     +'<div class="table-wrap"><table><thead><tr>'+thHTML+'</tr></thead><tbody>'+rowsHTML+'</tbody></table></div>'
     +'<div class="cards">'+cardsHTML+'</div>';
+  restoreSearchFocusAfterRender();
 }
 
 function setTab(t){ activeTab=t; statFilter=null; render(); }
 function setSearch(v){
   search=v;
-  if(searchTimer){
-    clearTimeout(searchTimer);
+  keepSearchFocus=true;
+
+  var active=document.activeElement;
+  if(active && active.id==="search-box"){
+    try {
+      keepSearchSelectionStart=active.selectionStart || String(v||"").length;
+      keepSearchSelectionEnd=active.selectionEnd || keepSearchSelectionStart;
+    } catch(e) {
+      keepSearchSelectionStart=String(v||"").length;
+      keepSearchSelectionEnd=keepSearchSelectionStart;
+    }
+  } else {
+    keepSearchSelectionStart=String(v||"").length;
+    keepSearchSelectionEnd=keepSearchSelectionStart;
   }
-  searchTimer=setTimeout(function(){
-    render();
-  },350);
+
+  render();
 }
 function setFilterStatus(v){ filterStatus=v; render(); }
 function setFilterOwner(v){ filterOwner=v; render(); }
@@ -626,7 +689,6 @@ function openModalUI(){
   wrap.classList.add("open");
   document.body.classList.add("modal-open");
   document.body.style.overflow="hidden";
-  document.body.style.top="-"+savedScrollY+"px";
 
   adjustModalForKeyboard();
 }
@@ -638,7 +700,6 @@ function closeModal(){
   document.body.classList.remove("modal-open");
   document.body.style.overflow="";
   document.body.style.top="";
-  window.scrollTo(0,savedScrollY||0);
 
   currentLead=null;
   isAdding=false;
@@ -648,8 +709,6 @@ function closeModal(){
     saveBtn.disabled=false;
     saveBtn.textContent="💾 שמור";
   }
-  var delBtn=document.getElementById("btn-delete-lead");
-  if(delBtn){ delBtn.disabled=false; delBtn.textContent="🗑️ מחק"; }
 }
 
 function saveLead(){
@@ -757,39 +816,20 @@ function updateStatus(id,status){
 
 
 function adjustModalForKeyboard(){
+  // Intentionally minimal.
+  // Previous versions forced scroll/height changes on every keyboard movement,
+  // which caused mobile text fields to jump and lose typing flow.
   var box=document.querySelector(".modal-box");
   if(!box)return;
-
-  if(window.visualViewport&&window.innerWidth<=600){
-    var viewportHeight=window.visualViewport.height;
-    var windowHeight=window.innerHeight;
-    var keyboardHeight=Math.max(0,windowHeight-viewportHeight);
-
-    if(keyboardHeight>80){
-      box.style.maxHeight=Math.max(320,viewportHeight-12)+"px";
-      box.style.paddingBottom="18px";
-    } else {
-      box.style.maxHeight="88dvh";
-      box.style.paddingBottom="max(28px, env(safe-area-inset-bottom))";
-    }
+  if(window.innerWidth<=600){
+    box.style.maxHeight="88dvh";
+    box.style.paddingBottom="max(28px, env(safe-area-inset-bottom))";
   }
 }
 
 if(window.visualViewport){
   window.visualViewport.addEventListener("resize",adjustModalForKeyboard);
-  window.visualViewport.addEventListener("scroll",adjustModalForKeyboard);
 }
-
-document.addEventListener("focusin",function(e){
-  if(e.target&&(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA"||e.target.tagName==="SELECT")){
-    setTimeout(function(){
-      adjustModalForKeyboard();
-      try {
-        e.target.scrollIntoView({block:"center",behavior:"smooth"});
-      } catch(err) {}
-    },250);
-  }
-});
 
 function buildGCalLink(){
   var company=g("f_company"), date=g("f_meetingDate"), time=g("f_meetingTime")||"09:00", loc=g("f_meetingLocation"), guest=g("f_meetingGuest");
