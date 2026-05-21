@@ -143,40 +143,9 @@ body.modal-open {
 .btn-delete:disabled { opacity: 0.65; cursor: not-allowed; }
 
 
-.btn-tool {
-  background: rgba(255,255,255,0.10);
-  color: #fff;
-  border: 1px solid rgba(255,255,255,0.18);
-  border-radius: 10px;
-  padding: 9px 12px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
-  white-space: nowrap;
-}
+.btn-tool { background: rgba(255,255,255,0.10); color: #fff; border: 1px solid rgba(255,255,255,0.18); border-radius: 10px; padding: 9px 12px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .btn-tool:active { transform: scale(0.98); }
-.btn-delete {
-  padding: 13px;
-  border: 1.5px solid #fecaca;
-  border-radius: 10px;
-  background: #fef2f2;
-  cursor: pointer;
-  font-size: 15px;
-  color: #dc2626;
-  font-family: inherit;
-  flex: 1;
-  font-weight: 700;
-}
-.btn-delete:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-@media (max-width: 700px) {
-  .header { align-items: flex-start; }
-  .header-actions { flex-wrap: wrap; justify-content: flex-end; gap: 6px !important; }
-  .btn-tool { padding: 8px 9px; font-size: 12px; }
-}
+@media (max-width: 700px) { .header-actions { flex-wrap: wrap; justify-content: flex-end; gap: 6px !important; } .btn-tool { padding: 8px 9px; font-size: 12px; } }
 
 </style>
 </head>
@@ -327,7 +296,7 @@ function saveLocalBackup(data){
 
 function saveLeads(nl){
   leads=normalizeLeadsList(nl);
-  saveLocalBackup(leads);
+  saveLocalBackup(nl);
   syncStatus="syncing";
   updateBadge();
 
@@ -358,7 +327,7 @@ function init(){
     } else {
       var localBackup=loadLocalBackup();
       leads=normalizeLeadsList((Array.isArray(localBackup)&&localBackup.length>0)?localBackup:INITIAL_LEADS);
-      if(leads.length>0) fbWrite(leads).catch(function(){});
+      if(!(d&&Array.isArray(d)&&d.length>0)) fbWrite(leads).catch(function(){});
     }
 
     saveLocalBackup(leads);
@@ -376,7 +345,10 @@ function init(){
     var modalOpen=document.getElementById("modal-wrap")&&document.getElementById("modal-wrap").classList.contains("open");
     var active=document.activeElement;
     var typing=active&&["INPUT","TEXTAREA","SELECT"].indexOf(active.tagName)>=0;
-    if(modalOpen||typing) return;
+
+    if(modalOpen||typing){
+      return;
+    }
 
     fbRead().then(function(d){
       if(d&&Array.isArray(d)){
@@ -397,6 +369,26 @@ function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;
 function fmtDate(d){ return d?d.split("-").reverse().join("/"):"—"; }
 function sOpt(s){ return STATUS_OPTIONS.filter(function(x){return x.label===s;})[0]||STATUS_OPTIONS[0]; }
 function ownerStyle(o){ if(o==="בועז")return"background:#dbeafe;color:#1d4ed8"; if(o==="בר")return"background:#dcfce7;color:#15803d"; return"background:#fef3c7;color:#92400e"; }
+
+
+function normalizeLead(l){
+  l=l||{};
+  if(l.phone && !l.email && String(l.phone).indexOf("@")>=0){
+    l.email=l.phone;
+    l.phone="";
+  }
+  if(!l.email) l.email="";
+  if(!l.phone) l.phone="";
+  if(!l.sheet) l.sheet="ראשוני";
+  if(!l.status) l.status="לא טופל";
+  if(!l.owner) l.owner="בועז";
+  if(!l.id) l.id=Date.now()+Math.floor(Math.random()*100000);
+  if(l.deleted===undefined) l.deleted=false;
+  return l;
+}
+function normalizeLeadsList(arr){
+  return (Array.isArray(arr)?arr:[]).map(function(l){return normalizeLead(l);});
+}
 
 function getFiltered(){
   return leads.filter(function(l){
@@ -518,10 +510,10 @@ function render(){
       +'<div><h1>☕ ניהול לידים</h1><p>🔥 מסונכרן בזמן אמת</p></div>'
       +'<div class="header-actions" style="display:flex;align-items:center;gap:8px">'
         +'<div class="sync-badge" id="sync-badge" style="color:#10b981">✅ '+syncLabel+'</div>'
-        +'<button class="btn-tool" onclick="exportToExcel()">⬇️ ייצוא</button>
-        <button class="btn-tool" onclick="triggerImport()">⬆️ ייבוא</button>
-        <input id="excel-import-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromExcel(event)">
-        <button class="btn-add" onclick="openAdd()">+ ליד</button>'
+        +'<button class="btn-tool" onclick="exportToExcel()">⬇️ ייצוא</button>'
+        +'<button class="btn-tool" onclick="triggerImport()">⬆️ ייבוא</button>'
+        +'<input id="excel-import-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromExcel(event)">'
+        +'<button class="btn-add" onclick="openAdd()">+ ליד</button>'
       +'</div>'
     +'</div>'
     +'<div class="stats">'+statsHTML+'</div>'
@@ -536,7 +528,7 @@ function render(){
         +'<option'+(filterOwner==="הכל"?" selected":"")+'>הכל</option>'
         +OWNERS.map(function(o){return '<option'+(filterOwner===o?" selected":"")+'>'+o+'</option>';}).join("")
       +'</select>'
-      +'<span class="count">'+filtered.length+' לידים'+(statFilter?(" • "+(statFilter==="__בטיפול"?"לידים בטיפול":statFilter)):"")+'</span>'
+      +'<span class="count">'+filtered.length+' לידים'+(statFilter?" • "+statFilter:"")+'</span>'
     +'</div>'
     +'<div class="table-wrap"><table><thead><tr>'+thHTML+'</tr></thead><tbody>'+rowsHTML+'</tbody></table></div>'
     +'<div class="cards">'+cardsHTML+'</div>';
@@ -839,96 +831,73 @@ function buildICS(){
 function safeExcelValue(v){
   return v===undefined||v===null ? "" : String(v);
 }
-
 function exportToExcel(){
   var data=leads.filter(function(l){return !l.deleted;}).map(function(l){
     return {
-      "שם חברה": safeExcelValue(l.company),
-      "כמות עובדים": l.employees||"",
-      "מיקום": safeExcelValue(l.location),
-      "חיבור": safeExcelValue(l.connection),
-      "איש קשר": safeExcelValue(l.contact),
-      "תפקיד": safeExcelValue(l.role),
-      "טלפון": safeExcelValue(l.phone),
-      "מייל": safeExcelValue(l.email),
-      "אחראי": safeExcelValue(l.owner),
-      "מצב קיים": safeExcelValue(l.currentStatus),
-      "סטטוס": safeExcelValue(l.status),
-      "הערות": safeExcelValue(l.notes),
-      "תאריך עדכון": safeExcelValue(l.lastUpdated),
-      "כרטיסייה": safeExcelValue(l.sheet),
-      "תאריך פגישה": safeExcelValue(l.meetingDate),
-      "שעת פגישה": safeExcelValue(l.meetingTime),
-      "מיקום פגישה": safeExcelValue(l.meetingLocation),
-      "מייל לזימון": safeExcelValue(l.meetingGuest)
+      "שם חברה":safeExcelValue(l.company),
+      "כמות עובדים":l.employees||"",
+      "מיקום":safeExcelValue(l.location),
+      "חיבור":safeExcelValue(l.connection),
+      "איש קשר":safeExcelValue(l.contact),
+      "תפקיד":safeExcelValue(l.role),
+      "טלפון":safeExcelValue(l.phone),
+      "מייל":safeExcelValue(l.email),
+      "אחראי":safeExcelValue(l.owner),
+      "מצב קיים":safeExcelValue(l.currentStatus),
+      "סטטוס":safeExcelValue(l.status),
+      "הערות":safeExcelValue(l.notes),
+      "תאריך עדכון":safeExcelValue(l.lastUpdated),
+      "כרטיסייה":safeExcelValue(l.sheet),
+      "תאריך פגישה":safeExcelValue(l.meetingDate),
+      "שעת פגישה":safeExcelValue(l.meetingTime),
+      "מיקום פגישה":safeExcelValue(l.meetingLocation),
+      "מייל לזימון":safeExcelValue(l.meetingGuest)
     };
   });
-
-  if(!data.length){
-    alert("אין לידים לייצוא");
-    return;
-  }
-
-  if(!window.XLSX){
-    exportToCSV(data);
-    return;
-  }
-
+  if(!data.length){alert("אין לידים לייצוא");return;}
+  if(!window.XLSX){exportToCSV(data);return;}
   var ws=XLSX.utils.json_to_sheet(data);
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,"Leads");
   XLSX.writeFile(wb,"mister-bean-leads-"+new Date().toISOString().split("T")[0]+".xlsx");
 }
-
 function exportToCSV(data){
   var headers=Object.keys(data[0]);
   var csv="\ufeff"+headers.join(",")+"\n"+data.map(function(row){
-    return headers.map(function(h){
-      return '"' + String(row[h]||"").replace(/"/g,'""') + '"';
-    }).join(",");
+    return headers.map(function(h){return '"'+String(row[h]||"").replace(/"/g,'""')+'"';}).join(",");
   }).join("\n");
-
   var blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
   var a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
   a.download="mister-bean-leads-"+new Date().toISOString().split("T")[0]+".csv";
   a.click();
 }
-
 function triggerImport(){
   var input=document.getElementById("excel-import-input");
-  if(input){
-    input.value="";
-    input.click();
-  }
+  if(input){input.value="";input.click();}
 }
-
 function pick(row,names){
   for(var i=0;i<names.length;i++){
-    if(row[names[i]]!==undefined && row[names[i]]!==null && String(row[names[i]]).trim()!==""){
-      return String(row[names[i]]).trim();
-    }
+    if(row[names[i]]!==undefined&&row[names[i]]!==null&&String(row[names[i]]).trim()!=="") return String(row[names[i]]).trim();
   }
   return "";
 }
-
 function excelDateToISO(v){
-  if(!v) return "";
-  if(typeof v==="number" && window.XLSX && XLSX.SSF){
+  if(!v)return "";
+  if(typeof v==="number"&&window.XLSX&&XLSX.SSF){
     var d=XLSX.SSF.parse_date_code(v);
-    if(d) return String(d.y).padStart(4,"0")+"-"+String(d.m).padStart(2,"0")+"-"+String(d.d).padStart(2,"0");
+    if(d)return String(d.y).padStart(4,"0")+"-"+String(d.m).padStart(2,"0")+"-"+String(d.d).padStart(2,"0");
   }
   var s=String(v).trim();
-  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
   if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){
     var p=s.split("/");
     return p[2]+"-"+p[1].padStart(2,"0")+"-"+p[0].padStart(2,"0");
   }
   return s;
 }
-
 function rowToLead(row){
-  var lead={
+  return normalizeLead({
     id:Date.now()+Math.floor(Math.random()*1000000),
     company:pick(row,["שם חברה","חברה","company","Company","שם עסק"]),
     employees:Number(pick(row,["כמות עובדים","עובדים","employees","Employees"]))||0,
@@ -949,19 +918,12 @@ function rowToLead(row){
     meetingLocation:pick(row,["מיקום פגישה","meetingLocation","Meeting Location"]),
     meetingGuest:pick(row,["מייל לזימון","meetingGuest","Meeting Guest"]),
     deleted:false
-  };
-  return normalizeLead(lead);
+  });
 }
-
 function importFromExcel(event){
   var file=event.target.files&&event.target.files[0];
-  if(!file) return;
-
-  if(!window.XLSX){
-    alert("רכיב הייבוא לא נטען. בדוק חיבור אינטרנט ואז נסה שוב.");
-    return;
-  }
-
+  if(!file)return;
+  if(!window.XLSX){alert("רכיב הייבוא לא נטען. בדוק חיבור אינטרנט ואז נסה שוב.");return;}
   var reader=new FileReader();
   reader.onload=function(e){
     try{
@@ -970,22 +932,10 @@ function importFromExcel(event){
       var firstSheet=workbook.Sheets[workbook.SheetNames[0]];
       var rows=XLSX.utils.sheet_to_json(firstSheet,{defval:""});
       var imported=rows.map(rowToLead).filter(function(l){return l.company;});
-
-      if(imported.length===0){
-        alert("לא נמצאו שורות עם שם חברה בקובץ.");
-        return;
-      }
-
+      if(imported.length===0){alert("לא נמצאו שורות עם שם חברה בקובץ.");return;}
       var replace=confirm("נמצאו "+imported.length+" לידים בקובץ.\n\nאישור = להחליף את כל הרשימה הקיימת.\nביטול = להוסיף לרשימה הקיימת.");
       var nl=replace?imported:leads.concat(imported);
-
-      saveLeads(nl).then(function(){
-        render();
-        alert("הייבוא הסתיים בהצלחה. נוספו/נטענו "+imported.length+" לידים.");
-      }).catch(function(){
-        render();
-        alert("הייבוא נשמר מקומית, אבל לא הסתנכרן לענן.");
-      });
+      saveLeads(nl).then(function(){render();alert("הייבוא הסתיים בהצלחה. נוספו/נטענו "+imported.length+" לידים.");}).catch(function(){render();alert("הייבוא נשמר מקומית, אבל לא הסתנכרן לענן.");});
     }catch(err){
       alert("שגיאה בייבוא הקובץ. ודא שזה קובץ Excel או CSV תקין.");
     }
