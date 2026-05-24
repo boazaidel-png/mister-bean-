@@ -121,7 +121,9 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
 
 
 
-/* Stable tab order editor */
+
+/* Fixed tab navigation + vertical order editor */
+.tabs .tab{cursor:pointer;touch-action:manipulation}
 .tab-order-hint{
   display:flex;
   gap:8px;
@@ -149,22 +151,13 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
   padding:12px;
   box-shadow:0 1px 1px rgba(9,30,66,.08);
 }
-.tab-order-panel-title{
-  font-size:13px;
-  font-weight:900;
-  color:#172b4d;
-  margin-bottom:8px;
-}
-.tab-sort-list{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
+.tab-order-panel-title{font-size:13px;font-weight:900;color:#172b4d;margin-bottom:6px}
+.tab-sort-list{display:flex;flex-direction:column;gap:6px}
 .tab-sort-item{
   background:#f4f5f7;
   border:1px solid #dfe1e6;
   border-radius:8px;
-  padding:11px 12px;
+  padding:12px;
   font-size:13px;
   font-weight:900;
   color:#172b4d;
@@ -172,37 +165,14 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
   user-select:none;
   touch-action:none;
   display:flex;
-  align-items:center;
   justify-content:space-between;
+  align-items:center;
 }
-.tab-sort-item:after{
-  content:"☰";
-  color:#6b778c;
-  font-size:16px;
-}
-.tab-sort-item.sortable-chosen{
-  box-shadow:0 0 0 2px #0052cc inset;
-}
-.tab-sort-item.sortable-ghost{
-  opacity:.35;
-}
-.tab-sort-footer{
-  margin-top:8px;
-  font-size:11px;
-  color:#6b778c;
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
-.tab-sort-footer button{
-  border:0;
-  background:transparent;
-  color:#0052cc;
-  font-weight:900;
-  cursor:pointer;
-  font-family:inherit;
-  padding:0;
-}
+.tab-sort-item:after{content:"☰";color:#6b778c;font-size:16px}
+.tab-sort-item.sortable-chosen{box-shadow:0 0 0 2px #0052cc inset}
+.sortable-ghost{opacity:.35}
+.tab-sort-footer{margin-top:10px;display:flex;gap:12px;flex-wrap:wrap}
+.tab-sort-footer button{border:0;background:transparent;color:#0052cc;font-weight:900;cursor:pointer;font-family:inherit;padding:0}
 
 </style>
 </head>
@@ -521,9 +491,51 @@ function getCurrentTabOrderFromEditor(){
   }).filter(Boolean);
 }
 
+function saveTabOrderFromEditor(){
+  var order=getCurrentTabOrderFromEditor();
+  if(order.length){
+    saveTabOrder(order);
+    customTabOrder=order;
+  }
+}
+
+function initNativeTabOrderEditor(el){
+  var dragged=null;
+  Array.prototype.slice.call(el.querySelectorAll("[data-sort-tab]")).forEach(function(item){
+    item.setAttribute("draggable","true");
+    item.ondragstart=function(e){
+      dragged=item;
+      item.classList.add("sortable-chosen");
+      try{e.dataTransfer.setData("text/plain",item.getAttribute("data-sort-tab"));}catch(err){}
+    };
+    item.ondragover=function(e){
+      e.preventDefault();
+      if(!dragged||dragged===item)return;
+      var rect=item.getBoundingClientRect();
+      var before=(e.clientY-rect.top)<rect.height/2;
+      el.insertBefore(dragged,before?item:item.nextSibling);
+    };
+    item.ondrop=function(e){
+      e.preventDefault();
+      saveTabOrderFromEditor();
+      render();
+    };
+    item.ondragend=function(){
+      item.classList.remove("sortable-chosen");
+      saveTabOrderFromEditor();
+      render();
+    };
+  });
+}
+
 function initTabOrderEditor(){
   var el=document.querySelector(".tab-sort-list");
-  if(!el || typeof Sortable==="undefined")return;
+  if(!el)return;
+
+  if(typeof Sortable==="undefined"){
+    initNativeTabOrderEditor(el);
+    return;
+  }
 
   if(tabOrderSortableInstance){
     try{tabOrderSortableInstance.destroy();}catch(e){}
@@ -541,12 +553,8 @@ function initTabOrderEditor(){
     fallbackOnBody:true,
     direction:"vertical",
     onEnd:function(){
-      var order=getCurrentTabOrderFromEditor();
-      if(order.length){
-        saveTabOrder(order);
-        customTabOrder=order;
-        render();
-      }
+      saveTabOrderFromEditor();
+      render();
     }
   });
 }
@@ -630,8 +638,21 @@ function render(){
     if(t==="לפנייה עתידית"&&futureCount>0)badge=' <span style="background:#5243aa;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px">'+futureCount+'</span>';
     return '<button type="button" class="'+cls+'" data-tab="'+esc(t)+'" onclick="setTab('+JSON.stringify(t)+')">'+t+badge+'</button>';
   }).join("");
-
-  var tabOrderPanel=tabOrderEditorOpen?('<div class="tab-order-panel"><div class="tab-order-panel-title">גרור למעלה/למטה כדי לשנות את סדר הכרטיסיות</div><div class="tab-sort-list">'+tabs.map(function(t){return '<div class="tab-sort-item" data-sort-tab="'+esc(t)+'">'+esc(t)+'</div>';}).join("")+'</div><div class="tab-sort-footer"><button onclick="resetTabOrder()">איפוס לברירת מחדל</button><button onclick="toggleTabOrderEditor()">סגור</button></div></div>'):"";
+  var tabOrderPanel=tabOrderEditorOpen?(
+    '<div class="tab-order-panel">'
+      +'<div class="tab-order-panel-title">סידור כרטיסיות</div>'
+      +'<div style="font-size:12px;color:#6b778c;margin-bottom:8px">גרור למעלה או למטה כדי לשנות את הסדר.</div>'
+      +'<div class="tab-sort-list">'
+        +tabs.map(function(t){
+          return '<div class="tab-sort-item" data-sort-tab="'+esc(t)+'">'+esc(t)+'</div>';
+        }).join("")
+      +'</div>'
+      +'<div class="tab-sort-footer">'
+        +'<button type="button" onclick="resetTabOrder()">איפוס לברירת מחדל</button>'
+        +'<button type="button" onclick="toggleTabOrderEditor()">סגור</button>'
+      +'</div>'
+    +'</div>'
+  ):"";
   var thHTML=[
     ["company","חברה"],["priority","עדיפות"],["followUpDate","פולואפ"],["employees","עובדים"],["contact","איש קשר"],["phone","טלפון"],["email","מייל"],["owner","אחראי"],["status","סטטוס"],["lastUpdated","תאריך"]
   ].map(function(kl){
@@ -689,7 +710,7 @@ function render(){
   document.getElementById("app").innerHTML=
     '<div class="header"><div><h1>☕ ניהול לידים</h1><p>סביבת עבודה בסגנון Jira • סנכרון ענן</p></div><div class="header-actions"><div class="sync-badge" id="sync-badge" style="color:#79f2c0">✅ '+syncLabel+'</div><button class="btn-tool" onclick="exportToExcel()">⬇️ ייצוא</button><button class="btn-tool" onclick="triggerImport()">⬆️ ייבוא</button><input id="excel-import-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromExcel(event)"><button class="btn-add" onclick="openAdd()">+ ליד</button></div></div>'
     +'<div class="stats">'+statsHTML+'</div>'
-    +'<div class="tabs">'+tabsHTML+'</div><div class="tab-order-hint"><span>סדר הכרטיסיות ניתן לשינוי בגרירה אנכית.</span><button class="tab-order-link" onclick="toggleTabOrderEditor()">סידור כרטיסיות</button></div>'+tabOrderPanel+''
+    +'<div class="tabs">'+tabsHTML+'</div><div class="tab-order-hint"><span>סדר הכרטיסיות ניתן לשינוי במסך נפרד.</span><button type="button" class="tab-order-link" onclick="toggleTabOrderEditor()">סידור כרטיסיות</button></div>'+tabOrderPanel+''
     +'<div class="filters"><input id="search-box" placeholder="🔍 חיפוש..." value="'+esc(search)+'" oninput="setSearch(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><select onchange="setFilterStatus(this.value)"><option'+(filterStatus==="הכל"?" selected":"")+'>הכל</option>'+STATUS_OPTIONS.map(function(s){return '<option'+(filterStatus===s.label?" selected":"")+'>'+s.label+'</option>';}).join("")+'</select><select onchange="setFilterOwner(this.value)"><option'+(filterOwner==="הכל"?" selected":"")+'>הכל</option>'+OWNERS.map(function(o){return '<option'+(filterOwner===o?" selected":"")+'>'+o+'</option>';}).join("")+'</select><span class="count">'+filtered.length+' לידים'+(statLabel?" • "+statLabel:"")+'</span></div>'
     +mainContent;
 
