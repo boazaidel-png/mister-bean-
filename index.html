@@ -134,72 +134,6 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
 .tabs .tab *{pointer-events:none}
 
 
-/* Separate tab order panel */
-.tab-order-hint{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  flex-wrap:wrap;
-  font-size:11px;
-  color:#6b778c;
-  margin:6px 14px 0;
-  font-weight:700;
-}
-.tab-order-link{
-  border:0;
-  background:transparent;
-  color:#0052cc;
-  font-weight:900;
-  cursor:pointer;
-  font-family:inherit;
-  padding:0;
-}
-.tab-order-panel{
-  margin:8px 14px 0;
-  background:#fff;
-  border:1px solid #dfe1e6;
-  border-radius:8px;
-  padding:12px;
-  box-shadow:0 1px 1px rgba(9,30,66,.08);
-  position:relative;
-  z-index:25;
-}
-.tab-order-panel-title{font-size:13px;font-weight:900;color:#172b4d;margin-bottom:6px}
-.tab-sort-list{display:flex;flex-direction:column;gap:6px}
-.tab-sort-item{
-  background:#f4f5f7;
-  border:1px solid #dfe1e6;
-  border-radius:8px;
-  padding:12px;
-  font-size:13px;
-  font-weight:900;
-  color:#172b4d;
-  cursor:grab;
-  user-select:none;
-  touch-action:none;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-.tab-sort-item:after{content:"☰";color:#6b778c;font-size:16px}
-.tab-sort-item.sortable-chosen{box-shadow:0 0 0 2px #0052cc inset}
-.sortable-ghost{opacity:.35}
-.tab-sort-footer{margin-top:10px;display:flex;gap:12px;flex-wrap:wrap}
-.tab-sort-footer button{border:0;background:transparent;color:#0052cc;font-weight:900;cursor:pointer;font-family:inherit;padding:0}
-.tabs .tab{cursor:pointer;touch-action:manipulation;pointer-events:auto}
-.tabs .tab *{pointer-events:none}
-
-
-/* Ensure tab-order button is clickable */
-.tab-order-hint,
-.tab-order-hint *{
-  pointer-events:auto;
-}
-.tab-order-link{
-  position:relative;
-  z-index:40;
-}
-
 </style>
 </head>
 <body>
@@ -265,7 +199,6 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
 <div id="app"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
 var DB_URL="https://mister-bean-default-rtdb.europe-west1.firebasedatabase.app/leads.json";
 var STATUS_OPTIONS=[
@@ -284,7 +217,7 @@ var OLD_STATUS_MAP={"ממתין לחיבור":"בהמתנה לפרטים","נש�
 var PRIORITY_OPTIONS=["נמוכה","בינונית","גבוהה"];
 var OWNERS=["בועז","בר","בועז/בר","אחר"];
 var TASK_STATUS_OPTIONS=["פתוחה","בטיפול","נדחתה","בוצעה","בוטלה"];
-var leads=[],activeTab="לידים בתהליך",filterStatus="הכל",filterOwner="הכל",search="",sortKey="followUpDate",sortDir="asc",syncStatus="idle",lastSync=null,currentLead=null,isAdding=false,statFilter=null,searchTimer=null,keepSearchFocus=false,keepSearchSelectionStart=0,keepSearchSelectionEnd=0,keepWindowScrollY=0,taskOwnerFilter="הכל",taskStatusQuickFilter="הכל",customTabOrder=null,tabOrderEditorOpen=false,lastTabOrderToggleAt=0;
+var leads=[],activeTab="לידים בתהליך",filterStatus="הכל",filterOwner="הכל",search="",sortKey="followUpDate",sortDir="asc",syncStatus="idle",lastSync=null,currentLead=null,isAdding=false,statFilter=null,searchTimer=null,keepSearchFocus=false,keepSearchSelectionStart=0,keepSearchSelectionEnd=0,keepWindowScrollY=0,taskOwnerFilter="הכל",taskStatusQuickFilter="הכל",customTabOrder=null;
 
 function fbRead(){return fetch(DB_URL+"?t="+Date.now()).then(function(r){if(!r.ok)throw new Error("read failed");return r.json();});}
 function fbWrite(d){return fetch(DB_URL,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)}).then(function(r){if(!r.ok)throw new Error("write failed");return true;});}
@@ -521,12 +454,7 @@ function loadTabOrder(defaultTabs){
 function saveTabOrder(order){
   return;
 }
-function resetTabOrder(){
-  localStorage.removeItem("misterBeanTabOrder");
-  customTabOrder=null;
-  
-  render();
-}
+
 
 function render(){
   preserveSearchFocusBeforeRender();
@@ -549,8 +477,7 @@ function render(){
     {label:"הצעות מחיר",value:leads.filter(function(l){return !l.deleted&&l.status==="נשלחה הצעת מחיר";}).length,color:"#00875a",icon:"📨",filter:"נשלחה הצעת מחיר"}
   ];
 
-  var defaultTabs=["לטיפול היום","משימות","לידים בתהליך","מתקדם","הצעות","פגישות","לפנייה עתידית","נסגר","לא רלוונטי","נמחקו"];
-  var tabs=loadTabOrder(defaultTabs);
+  var tabs=["משימות","לטיפול היום","לידים בתהליך","מתקדם","פגישות","הצעות","לפנייה עתידית","נסגר","לא רלוונטי","נמחקו"];
 
   var statsHTML=statsData.map(function(s){
     var isDashActive=(s.filter==="נשלחה הצעת מחיר"&&activeTab==="הצעות")||(s.filter==="נקבעה פגישה"&&activeTab==="פגישות")||(s.filter==="לפנייה עתידית"&&activeTab==="לפנייה עתידית")||(s.filter==="__היום"&&activeTab==="לטיפול היום")||(s.filter==="__משימות"&&activeTab==="משימות")||(s.filter==="__בטיפול"&&activeTab==="לידים בתהליך")||(statFilter===s.filter&&s.filter);
@@ -571,21 +498,6 @@ function render(){
     if(t==="לפנייה עתידית"&&futureCount>0)badge=' <span style="background:#5243aa;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px">'+futureCount+'</span>';
     return '<button type="button" class="'+cls+'" data-tab="'+esc(t)+'">'+t+badge+'</button>';
   }).join("");
-  var tabOrderPanel=tabOrderEditorOpen?(
-    '<div class="tab-order-panel">'
-      +'<div class="tab-order-panel-title">סידור כרטיסיות</div>'
-      +'<div style="font-size:12px;color:#6b778c;margin-bottom:8px">גרור למעלה או למטה כדי לשנות את הסדר. הכרטיסיות הרגילות נשארות לחיצות.</div>'
-      +'<div class="tab-sort-list">'
-        +tabs.map(function(t){
-          return '<div class="tab-sort-item" data-sort-tab="'+esc(t)+'">'+esc(t)+'</div>';
-        }).join("")
-      +'</div>'
-      +'<div class="tab-sort-footer">'
-        +'<button type="button" class="reset-tab-order-btn">איפוס לברירת מחדל</button>'
-        +'<button type="button" class="close-tab-order-btn">סגור</button>'
-      +'</div>'
-    +'</div>'
-  ):"";
   var thHTML=[
     ["company","חברה"],["priority","עדיפות"],["followUpDate","פולואפ"],["employees","עובדים"],["contact","איש קשר"],["phone","טלפון"],["email","מייל"],["owner","אחראי"],["status","סטטוס"],["lastUpdated","תאריך"]
   ].map(function(kl){
@@ -643,12 +555,12 @@ function render(){
   document.getElementById("app").innerHTML=
     '<div class="header"><div><h1>☕ ניהול לידים</h1><p>סביבת עבודה בסגנון Jira • סנכרון ענן</p></div><div class="header-actions"><div class="sync-badge" id="sync-badge" style="color:#79f2c0">✅ '+syncLabel+'</div><button class="btn-tool" onclick="exportToExcel()">⬇️ ייצוא</button><button class="btn-tool" onclick="triggerImport()">⬆️ ייבוא</button><input id="excel-import-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromExcel(event)"><button class="btn-add" onclick="openAdd()">+ ליד</button></div></div>'
     +'<div class="stats">'+statsHTML+'</div>'
-    +'<div class="tabs">'+tabsHTML+'</div><div class="tab-order-hint"><span>רוצה לשנות סדר?</span><button type="button" id="open-tab-order-btn" class="tab-order-link">סידור כרטיסיות</button></div>'+tabOrderPanel
+    +'<div class="tabs">'+tabsHTML+'</div>'
     +'<div class="filters"><input id="search-box" placeholder="🔍 חיפוש..." value="'+esc(search)+'" oninput="setSearch(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><select onchange="setFilterStatus(this.value)"><option'+(filterStatus==="הכל"?" selected":"")+'>הכל</option>'+STATUS_OPTIONS.map(function(s){return '<option'+(filterStatus===s.label?" selected":"")+'>'+s.label+'</option>';}).join("")+'</select><select onchange="setFilterOwner(this.value)"><option'+(filterOwner==="הכל"?" selected":"")+'>הכל</option>'+OWNERS.map(function(o){return '<option'+(filterOwner===o?" selected":"")+'>'+o+'</option>';}).join("")+'</select><span class="count">'+filtered.length+' לידים'+(statLabel?" • "+statLabel:"")+'</span></div>'
     +mainContent;
 
   updateBadge();
-  restoreSearchFocusAfterRender();if(tabOrderEditorOpen)setTimeout(initTabOrderEditor,0);
+  restoreSearchFocusAfterRender();
   
 }
 function setTab(t){activeTab=t;statFilter=null;render();}function setFilterStatus(v){filterStatus=v;render();}function setFilterOwner(v){filterOwner=v;render();}function setSort(k){if(sortKey===k)sortDir=sortDir==="asc"?"desc":"asc";else{sortKey=k;sortDir="asc";}render();}function dashboardFilterClick(f){
@@ -985,32 +897,11 @@ document.addEventListener("click",function(e){
 
 
 
-/* Stable navigation and tab-order controls */
+
+
+
+/* Stable tab click delegation */
 document.addEventListener("click",function(e){
-  var orderBtn=e.target.closest("#open-tab-order-btn,.tab-order-link");
-  if(orderBtn){
-    e.preventDefault();
-    e.stopPropagation();
-    toggleTabOrderEditor();
-    return;
-  }
-
-  var resetBtn=e.target.closest(".reset-tab-order-btn");
-  if(resetBtn){
-    e.preventDefault();
-    e.stopPropagation();
-    resetTabOrder();
-    return;
-  }
-
-  var closeBtn=e.target.closest(".close-tab-order-btn");
-  if(closeBtn){
-    e.preventDefault();
-    e.stopPropagation();
-    toggleTabOrderEditor();
-    return;
-  }
-
   var tab=e.target.closest(".tabs [data-tab]");
   if(tab){
     e.preventDefault();
@@ -1019,29 +910,7 @@ document.addEventListener("click",function(e){
     return;
   }
 });
-
 document.addEventListener("touchend",function(e){
-  var orderBtn=e.target.closest("#open-tab-order-btn,.tab-order-link");
-  if(orderBtn){
-    e.preventDefault();
-    toggleTabOrderEditor();
-    return;
-  }
-
-  var resetBtn=e.target.closest(".reset-tab-order-btn");
-  if(resetBtn){
-    e.preventDefault();
-    resetTabOrder();
-    return;
-  }
-
-  var closeBtn=e.target.closest(".close-tab-order-btn");
-  if(closeBtn){
-    e.preventDefault();
-    toggleTabOrderEditor();
-    return;
-  }
-
   var tab=e.target.closest(".tabs [data-tab]");
   if(tab){
     e.preventDefault();
