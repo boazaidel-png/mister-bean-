@@ -118,23 +118,90 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
 
 
 
-/* Drag-only tab ordering */
-.tabs.sortable-enabled{user-select:none}
-.tabs.sortable-enabled .tab{
-  cursor:grab;
-  touch-action:manipulation;
-}
-.tabs.sortable-enabled .tab:active{cursor:grabbing}
-.sortable-ghost{opacity:.35}
-.sortable-chosen{box-shadow:0 0 0 2px #0052cc inset}
-.sortable-drag{opacity:.9}
-.tab.dragging{opacity:.45}
-.tab.drag-over{box-shadow:0 0 0 2px #0052cc inset}
+
+
+
+/* Stable tab order editor */
 .tab-order-hint{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
   font-size:11px;
   color:#6b778c;
   margin:6px 14px 0;
   font-weight:700;
+}
+.tab-order-link{
+  border:0;
+  background:transparent;
+  color:#0052cc;
+  font-weight:900;
+  cursor:pointer;
+  font-family:inherit;
+  padding:0;
+}
+.tab-order-panel{
+  margin:8px 14px 0;
+  background:#fff;
+  border:1px solid #dfe1e6;
+  border-radius:8px;
+  padding:12px;
+  box-shadow:0 1px 1px rgba(9,30,66,.08);
+}
+.tab-order-panel-title{
+  font-size:13px;
+  font-weight:900;
+  color:#172b4d;
+  margin-bottom:8px;
+}
+.tab-sort-list{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.tab-sort-item{
+  background:#f4f5f7;
+  border:1px solid #dfe1e6;
+  border-radius:8px;
+  padding:11px 12px;
+  font-size:13px;
+  font-weight:900;
+  color:#172b4d;
+  cursor:grab;
+  user-select:none;
+  touch-action:none;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.tab-sort-item:after{
+  content:"☰";
+  color:#6b778c;
+  font-size:16px;
+}
+.tab-sort-item.sortable-chosen{
+  box-shadow:0 0 0 2px #0052cc inset;
+}
+.tab-sort-item.sortable-ghost{
+  opacity:.35;
+}
+.tab-sort-footer{
+  margin-top:8px;
+  font-size:11px;
+  color:#6b778c;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.tab-sort-footer button{
+  border:0;
+  background:transparent;
+  color:#0052cc;
+  font-weight:900;
+  cursor:pointer;
+  font-family:inherit;
+  padding:0;
 }
 
 </style>
@@ -221,7 +288,7 @@ var OLD_STATUS_MAP={"ממתין לחיבור":"בהמתנה לפרטים","נש�
 var PRIORITY_OPTIONS=["נמוכה","בינונית","גבוהה"];
 var OWNERS=["בועז","בר","בועז/בר","אחר"];
 var TASK_STATUS_OPTIONS=["פתוחה","בטיפול","נדחתה","בוצעה","בוטלה"];
-var leads=[],activeTab="לידים בתהליך",filterStatus="הכל",filterOwner="הכל",search="",sortKey="followUpDate",sortDir="asc",syncStatus="idle",lastSync=null,currentLead=null,isAdding=false,statFilter=null,searchTimer=null,keepSearchFocus=false,keepSearchSelectionStart=0,keepSearchSelectionEnd=0,keepWindowScrollY=0,taskOwnerFilter="הכל",taskStatusQuickFilter="הכל",customTabOrder=null;
+var leads=[],activeTab="לידים בתהליך",filterStatus="הכל",filterOwner="הכל",search="",sortKey="followUpDate",sortDir="asc",syncStatus="idle",lastSync=null,currentLead=null,isAdding=false,statFilter=null,searchTimer=null,keepSearchFocus=false,keepSearchSelectionStart=0,keepSearchSelectionEnd=0,keepWindowScrollY=0,taskOwnerFilter="הכל",taskStatusQuickFilter="הכל",customTabOrder=null,tabOrderEditorOpen=false;
 
 function fbRead(){return fetch(DB_URL+"?t="+Date.now()).then(function(r){if(!r.ok)throw new Error("read failed");return r.json();});}
 function fbWrite(d){return fetch(DB_URL,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)}).then(function(r){if(!r.ok)throw new Error("write failed");return true;});}
@@ -445,101 +512,48 @@ function getFiltered(){
 
 
 
-var tabsSortableInstance=null;
-var nativeDragTab=null;
-var suppressTabClick=false;
 
-function getCurrentTabsFromDom(){
-  return Array.prototype.slice.call(document.querySelectorAll(".tabs [data-tab]")).map(function(el){
-    return el.getAttribute("data-tab");
+var tabOrderSortableInstance=null;
+
+function getCurrentTabOrderFromEditor(){
+  return Array.prototype.slice.call(document.querySelectorAll(".tab-sort-list [data-sort-tab]")).map(function(el){
+    return el.getAttribute("data-sort-tab");
   }).filter(Boolean);
 }
 
-function saveCurrentTabOrderFromDom(){
-  var order=getCurrentTabsFromDom();
-  if(order.length){
-    saveTabOrder(order);
-    customTabOrder=order;
-  }
-}
+function initTabOrderEditor(){
+  var el=document.querySelector(".tab-sort-list");
+  if(!el || typeof Sortable==="undefined")return;
 
-function initNativeTabDrag(el){
-  var buttons=Array.prototype.slice.call(el.querySelectorAll("[data-tab]"));
-  buttons.forEach(function(btn){
-    btn.setAttribute("draggable","true");
-
-    btn.ondragstart=function(e){
-      nativeDragTab=btn.getAttribute("data-tab");
-      suppressTabClick=true;
-      btn.classList.add("dragging");
-      try{
-        e.dataTransfer.effectAllowed="move";
-        e.dataTransfer.setData("text/plain",nativeDragTab);
-      }catch(err){}
-    };
-
-    btn.ondragover=function(e){
-      e.preventDefault();
-      btn.classList.add("drag-over");
-    };
-
-    btn.ondragleave=function(){
-      btn.classList.remove("drag-over");
-    };
-
-    btn.ondrop=function(e){
-      e.preventDefault();
-      var from=nativeDragTab;
-      try{from=e.dataTransfer.getData("text/plain")||from;}catch(err){}
-      var to=btn.getAttribute("data-tab");
-      document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("dragging","drag-over");});
-      if(from&&to&&from!==to){
-        moveTabInOrder(from,to);
-      }
-      setTimeout(function(){suppressTabClick=false;},80);
-    };
-
-    btn.ondragend=function(){
-      document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("dragging","drag-over");});
-      setTimeout(function(){suppressTabClick=false;},80);
-    };
-  });
-}
-
-function initTabsSortable(){
-  var el=document.querySelector(".tabs");
-  if(!el)return;
-
-  el.classList.add("sortable-enabled");
-
-  if(typeof Sortable==="undefined"){
-    initNativeTabDrag(el);
-    return;
+  if(tabOrderSortableInstance){
+    try{tabOrderSortableInstance.destroy();}catch(e){}
+    tabOrderSortableInstance=null;
   }
 
-  if(tabsSortableInstance){
-    try{tabsSortableInstance.destroy();}catch(e){}
-    tabsSortableInstance=null;
-  }
-
-  tabsSortableInstance=Sortable.create(el,{
+  tabOrderSortableInstance=Sortable.create(el,{
     animation:160,
-    delay:180,
+    delay:120,
     delayOnTouchOnly:true,
-    touchStartThreshold:3,
+    touchStartThreshold:4,
     ghostClass:"sortable-ghost",
     chosenClass:"sortable-chosen",
-    dragClass:"sortable-drag",
     forceFallback:true,
     fallbackOnBody:true,
-    swapThreshold:0.65,
-    preventOnFilter:false,
-    onStart:function(){suppressTabClick=true;},
+    direction:"vertical",
     onEnd:function(){
-      saveCurrentTabOrderFromDom();
-      setTimeout(function(){suppressTabClick=false;},120);
+      var order=getCurrentTabOrderFromEditor();
+      if(order.length){
+        saveTabOrder(order);
+        customTabOrder=order;
+        render();
+      }
     }
   });
+}
+
+function toggleTabOrderEditor(){
+  tabOrderEditorOpen=!tabOrderEditorOpen;
+  render();
 }
 
 function loadTabOrder(defaultTabs){
@@ -569,6 +583,7 @@ function moveTabInOrder(fromTab,toTab){
 function resetTabOrder(){
   localStorage.removeItem("misterBeanTabOrder");
   customTabOrder=null;
+  tabOrderEditorOpen=false;
   render();
 }
 
@@ -616,6 +631,7 @@ function render(){
     return '<button type="button" class="'+cls+'" data-tab="'+esc(t)+'" onclick="setTab('+JSON.stringify(t)+')">'+t+badge+'</button>';
   }).join("");
 
+  var tabOrderPanel=tabOrderEditorOpen?('<div class="tab-order-panel"><div class="tab-order-panel-title">גרור למעלה/למטה כדי לשנות את סדר הכרטיסיות</div><div class="tab-sort-list">'+tabs.map(function(t){return '<div class="tab-sort-item" data-sort-tab="'+esc(t)+'">'+esc(t)+'</div>';}).join("")+'</div><div class="tab-sort-footer"><button onclick="resetTabOrder()">איפוס לברירת מחדל</button><button onclick="toggleTabOrderEditor()">סגור</button></div></div>'):"";
   var thHTML=[
     ["company","חברה"],["priority","עדיפות"],["followUpDate","פולואפ"],["employees","עובדים"],["contact","איש קשר"],["phone","טלפון"],["email","מייל"],["owner","אחראי"],["status","סטטוס"],["lastUpdated","תאריך"]
   ].map(function(kl){
@@ -673,15 +689,15 @@ function render(){
   document.getElementById("app").innerHTML=
     '<div class="header"><div><h1>☕ ניהול לידים</h1><p>סביבת עבודה בסגנון Jira • סנכרון ענן</p></div><div class="header-actions"><div class="sync-badge" id="sync-badge" style="color:#79f2c0">✅ '+syncLabel+'</div><button class="btn-tool" onclick="exportToExcel()">⬇️ ייצוא</button><button class="btn-tool" onclick="triggerImport()">⬆️ ייבוא</button><input id="excel-import-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromExcel(event)"><button class="btn-add" onclick="openAdd()">+ ליד</button></div></div>'
     +'<div class="stats">'+statsHTML+'</div>'
-    +'<div class="tabs">'+tabsHTML+'</div><div class="tab-order-hint">לחיצה ארוכה וגרירה לשינוי סדר הכרטיסיות.</div>'
+    +'<div class="tabs">'+tabsHTML+'</div><div class="tab-order-hint"><span>סדר הכרטיסיות ניתן לשינוי בגרירה אנכית.</span><button class="tab-order-link" onclick="toggleTabOrderEditor()">סידור כרטיסיות</button></div>'+tabOrderPanel+''
     +'<div class="filters"><input id="search-box" placeholder="🔍 חיפוש..." value="'+esc(search)+'" oninput="setSearch(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><select onchange="setFilterStatus(this.value)"><option'+(filterStatus==="הכל"?" selected":"")+'>הכל</option>'+STATUS_OPTIONS.map(function(s){return '<option'+(filterStatus===s.label?" selected":"")+'>'+s.label+'</option>';}).join("")+'</select><select onchange="setFilterOwner(this.value)"><option'+(filterOwner==="הכל"?" selected":"")+'>הכל</option>'+OWNERS.map(function(o){return '<option'+(filterOwner===o?" selected":"")+'>'+o+'</option>';}).join("")+'</select><span class="count">'+filtered.length+' לידים'+(statLabel?" • "+statLabel:"")+'</span></div>'
     +mainContent;
 
   updateBadge();
   restoreSearchFocusAfterRender();
-  setTimeout(initTabsSortable,0);
+  setTimeout(initTabOrderEditor,0);
 }
-function setTab(t){if(suppressTabClick)return;activeTab=t;statFilter=null;render();}function setFilterStatus(v){filterStatus=v;render();}function setFilterOwner(v){filterOwner=v;render();}function setSort(k){if(sortKey===k)sortDir=sortDir==="asc"?"desc":"asc";else{sortKey=k;sortDir="asc";}render();}function dashboardFilterClick(f){
+function setTab(t){activeTab=t;statFilter=null;render();}function setFilterStatus(v){filterStatus=v;render();}function setFilterOwner(v){filterOwner=v;render();}function setSort(k){if(sortKey===k)sortDir=sortDir==="asc"?"desc":"asc";else{sortKey=k;sortDir="asc";}render();}function dashboardFilterClick(f){
   statFilter=null;
 
   if(f==="__משימות"){activeTab="משימות";
