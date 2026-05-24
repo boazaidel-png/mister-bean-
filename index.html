@@ -399,7 +399,30 @@ function render(){
   updateBadge();
   restoreSearchFocusAfterRender();
 }
-function setTab(t){activeTab=t;statFilter=null;render();}function setFilterStatus(v){filterStatus=v;render();}function setFilterOwner(v){filterOwner=v;render();}function setSort(k){if(sortKey===k)sortDir=sortDir==="asc"?"desc":"asc";else{sortKey=k;sortDir="asc";}render();}function toggleStatFilter(f){statFilter=(statFilter===f)?null:f;if(f)activeTab="לידים בתהליך";render();}function setSearch(v){
+function setTab(t){activeTab=t;statFilter=null;render();}function setFilterStatus(v){filterStatus=v;render();}function setFilterOwner(v){filterOwner=v;render();}function setSort(k){if(sortKey===k)sortDir=sortDir==="asc"?"desc":"asc";else{sortKey=k;sortDir="asc";}render();}function toggleStatFilter(f){
+  statFilter=(statFilter===f)?null:f;
+
+  if(!statFilter){
+    render();
+    return;
+  }
+
+  if(f==="נשלחה הצעת מחיר"){
+    activeTab="הצעות";
+  }else if(f==="נקבעה פגישה"){
+    activeTab="פגישות";
+  }else if(f==="לפנייה עתידית"){
+    activeTab="לפנייה עתידית";
+  }else if(f==="__היום"){
+    activeTab="לטיפול היום";
+  }else if(f==="__בטיפול"){
+    activeTab="לידים בתהליך";
+  }else{
+    activeTab="לידים בתהליך";
+  }
+
+  render();
+}function setSearch(v){
   search=v;
   keepSearchFocus=true;
 
