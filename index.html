@@ -122,8 +122,19 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
 
 
 
-/* Fixed tab navigation + vertical order editor */
-.tabs .tab{cursor:pointer;touch-action:manipulation}
+
+/* Stable clickable tabs */
+.tabs{position:relative;z-index:20}
+.tabs .tab{
+  cursor:pointer;
+  touch-action:manipulation;
+  pointer-events:auto;
+  user-select:none;
+}
+.tabs .tab *{pointer-events:none}
+
+
+/* Separate tab order panel */
 .tab-order-hint{
   display:flex;
   gap:8px;
@@ -150,6 +161,8 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
   border-radius:8px;
   padding:12px;
   box-shadow:0 1px 1px rgba(9,30,66,.08);
+  position:relative;
+  z-index:25;
 }
 .tab-order-panel-title{font-size:13px;font-weight:900;color:#172b4d;margin-bottom:6px}
 .tab-sort-list{display:flex;flex-direction:column;gap:6px}
@@ -173,6 +186,8 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
 .sortable-ghost{opacity:.35}
 .tab-sort-footer{margin-top:10px;display:flex;gap:12px;flex-wrap:wrap}
 .tab-sort-footer button{border:0;background:transparent;color:#0052cc;font-weight:900;cursor:pointer;font-family:inherit;padding:0}
+.tabs .tab{cursor:pointer;touch-action:manipulation;pointer-events:auto}
+.tabs .tab *{pointer-events:none}
 
 </style>
 </head>
@@ -483,87 +498,6 @@ function getFiltered(){
 
 
 
-var tabOrderSortableInstance=null;
-
-function getCurrentTabOrderFromEditor(){
-  return Array.prototype.slice.call(document.querySelectorAll(".tab-sort-list [data-sort-tab]")).map(function(el){
-    return el.getAttribute("data-sort-tab");
-  }).filter(Boolean);
-}
-
-function saveTabOrderFromEditor(){
-  var order=getCurrentTabOrderFromEditor();
-  if(order.length){
-    saveTabOrder(order);
-    customTabOrder=order;
-  }
-}
-
-function initNativeTabOrderEditor(el){
-  var dragged=null;
-  Array.prototype.slice.call(el.querySelectorAll("[data-sort-tab]")).forEach(function(item){
-    item.setAttribute("draggable","true");
-    item.ondragstart=function(e){
-      dragged=item;
-      item.classList.add("sortable-chosen");
-      try{e.dataTransfer.setData("text/plain",item.getAttribute("data-sort-tab"));}catch(err){}
-    };
-    item.ondragover=function(e){
-      e.preventDefault();
-      if(!dragged||dragged===item)return;
-      var rect=item.getBoundingClientRect();
-      var before=(e.clientY-rect.top)<rect.height/2;
-      el.insertBefore(dragged,before?item:item.nextSibling);
-    };
-    item.ondrop=function(e){
-      e.preventDefault();
-      saveTabOrderFromEditor();
-      render();
-    };
-    item.ondragend=function(){
-      item.classList.remove("sortable-chosen");
-      saveTabOrderFromEditor();
-      render();
-    };
-  });
-}
-
-function initTabOrderEditor(){
-  var el=document.querySelector(".tab-sort-list");
-  if(!el)return;
-
-  if(typeof Sortable==="undefined"){
-    initNativeTabOrderEditor(el);
-    return;
-  }
-
-  if(tabOrderSortableInstance){
-    try{tabOrderSortableInstance.destroy();}catch(e){}
-    tabOrderSortableInstance=null;
-  }
-
-  tabOrderSortableInstance=Sortable.create(el,{
-    animation:160,
-    delay:120,
-    delayOnTouchOnly:true,
-    touchStartThreshold:4,
-    ghostClass:"sortable-ghost",
-    chosenClass:"sortable-chosen",
-    forceFallback:true,
-    fallbackOnBody:true,
-    direction:"vertical",
-    onEnd:function(){
-      saveTabOrderFromEditor();
-      render();
-    }
-  });
-}
-
-function toggleTabOrderEditor(){
-  tabOrderEditorOpen=!tabOrderEditorOpen;
-  render();
-}
-
 function loadTabOrder(defaultTabs){
   try{
     var saved=JSON.parse(localStorage.getItem("misterBeanTabOrder")||"null");
@@ -574,24 +508,12 @@ function loadTabOrder(defaultTabs){
   }catch(e){return defaultTabs;}
 }
 function saveTabOrder(order){
-  try{localStorage.setItem("misterBeanTabOrder",JSON.stringify(order));}catch(e){}
+  return;
 }
-function moveTabInOrder(fromTab,toTab){
-  var defaultTabs=["לטיפול היום","משימות","לידים בתהליך","מתקדם","הצעות","פגישות","לפנייה עתידית","נסגר","לא רלוונטי","נמחקו"];
-  var order=loadTabOrder(defaultTabs);
-  var from=order.indexOf(fromTab),to=order.indexOf(toTab);
-  if(from<0||to<0||from===to)return;
-  var item=order.splice(from,1)[0];
-  order.splice(to,0,item);
-  saveTabOrder(order);
-  customTabOrder=order;
-  render();
-}
-
 function resetTabOrder(){
   localStorage.removeItem("misterBeanTabOrder");
   customTabOrder=null;
-  tabOrderEditorOpen=false;
+  
   render();
 }
 
@@ -636,12 +558,12 @@ function render(){
     if(t==="נמחקו"&&deletedCount>0)badge=' <span style="background:#6b778c;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px">'+deletedCount+'</span>';
     if(t==="נסגר"&&closedCount>0)badge=' <span style="background:#006644;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px">'+closedCount+'</span>';
     if(t==="לפנייה עתידית"&&futureCount>0)badge=' <span style="background:#5243aa;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px">'+futureCount+'</span>';
-    return '<button type="button" class="'+cls+'" data-tab="'+esc(t)+'" onclick="setTab('+JSON.stringify(t)+')">'+t+badge+'</button>';
+    return '<button type="button" class="'+cls+'" data-tab="'+esc(t)+'">'+t+badge+'</button>';
   }).join("");
   var tabOrderPanel=tabOrderEditorOpen?(
     '<div class="tab-order-panel">'
       +'<div class="tab-order-panel-title">סידור כרטיסיות</div>'
-      +'<div style="font-size:12px;color:#6b778c;margin-bottom:8px">גרור למעלה או למטה כדי לשנות את הסדר.</div>'
+      +'<div style="font-size:12px;color:#6b778c;margin-bottom:8px">גרור למעלה או למטה כדי לשנות את הסדר. הכרטיסיות הרגילות נשארות לחיצות.</div>'
       +'<div class="tab-sort-list">'
         +tabs.map(function(t){
           return '<div class="tab-sort-item" data-sort-tab="'+esc(t)+'">'+esc(t)+'</div>';
@@ -710,13 +632,13 @@ function render(){
   document.getElementById("app").innerHTML=
     '<div class="header"><div><h1>☕ ניהול לידים</h1><p>סביבת עבודה בסגנון Jira • סנכרון ענן</p></div><div class="header-actions"><div class="sync-badge" id="sync-badge" style="color:#79f2c0">✅ '+syncLabel+'</div><button class="btn-tool" onclick="exportToExcel()">⬇️ ייצוא</button><button class="btn-tool" onclick="triggerImport()">⬆️ ייבוא</button><input id="excel-import-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromExcel(event)"><button class="btn-add" onclick="openAdd()">+ ליד</button></div></div>'
     +'<div class="stats">'+statsHTML+'</div>'
-    +'<div class="tabs">'+tabsHTML+'</div><div class="tab-order-hint"><span>סדר הכרטיסיות ניתן לשינוי במסך נפרד.</span><button type="button" class="tab-order-link" onclick="toggleTabOrderEditor()">סידור כרטיסיות</button></div>'+tabOrderPanel+''
+    +'<div class="tabs">'+tabsHTML+'</div><div class="tab-order-hint"><span>רוצה לשנות סדר?</span><button type="button" class="tab-order-link" onclick="toggleTabOrderEditor()">סידור כרטיסיות</button></div>'+tabOrderPanel
     +'<div class="filters"><input id="search-box" placeholder="🔍 חיפוש..." value="'+esc(search)+'" oninput="setSearch(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><select onchange="setFilterStatus(this.value)"><option'+(filterStatus==="הכל"?" selected":"")+'>הכל</option>'+STATUS_OPTIONS.map(function(s){return '<option'+(filterStatus===s.label?" selected":"")+'>'+s.label+'</option>';}).join("")+'</select><select onchange="setFilterOwner(this.value)"><option'+(filterOwner==="הכל"?" selected":"")+'>הכל</option>'+OWNERS.map(function(o){return '<option'+(filterOwner===o?" selected":"")+'>'+o+'</option>';}).join("")+'</select><span class="count">'+filtered.length+' לידים'+(statLabel?" • "+statLabel:"")+'</span></div>'
     +mainContent;
 
   updateBadge();
-  restoreSearchFocusAfterRender();
-  setTimeout(initTabOrderEditor,0);
+  restoreSearchFocusAfterRender();if(tabOrderEditorOpen)setTimeout(initTabOrderEditor,0);
+  
 }
 function setTab(t){activeTab=t;statFilter=null;render();}function setFilterStatus(v){filterStatus=v;render();}function setFilterOwner(v){filterOwner=v;render();}function setSort(k){if(sortKey===k)sortDir=sortDir==="asc"?"desc":"asc";else{sortKey=k;sortDir="asc";}render();}function dashboardFilterClick(f){
   statFilter=null;
@@ -1048,6 +970,25 @@ document.addEventListener("click",function(e){
   var row=e.target.closest("[data-open-id]");
   if(row){openEdit(row.getAttribute("data-open-id"));}
 });
+
+/* Stable tab click delegation */
+
+document.addEventListener("click",function(e){
+  var tab=e.target.closest(".tabs [data-tab]");
+  if(tab){
+    e.preventDefault();
+    e.stopPropagation();
+    setTab(tab.getAttribute("data-tab"));
+    return;
+  }
+});
+document.addEventListener("touchend",function(e){
+  var tab=e.target.closest(".tabs [data-tab]");
+  if(tab){
+    e.preventDefault();
+    setTab(tab.getAttribute("data-tab"));
+  }
+},{passive:false});
 
 populateSelects();init();
 </script>
