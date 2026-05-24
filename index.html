@@ -396,7 +396,7 @@ function getFiltered(){
     if(activeTab==="לפנייה עתידית"&&l.status!=="לפנייה עתידית")return false;
     if(activeTab==="הצעות"&&l.status!=="נשלחה הצעת מחיר")return false;
     if(activeTab==="פגישות"&&l.status!=="נקבעה פגישה")return false;
-    if(activeTab==="מתקדם"&&["בהמתנה לקביעת פגישה","נקבעה פגישה"].indexOf(l.status)<0)return false;
+    if(activeTab==="מתקדם"&&["בהמתנה לקביעת פגישה","נקבעה פגישה","בהמתנה להצעת מחיר","בהמתנה לשליחת הצעה"].indexOf(l.status)<0)return false;
 
     if(["לא רלוונטי","נסגר","לפנייה עתידית","נמחקו","הצעות"].indexOf(activeTab)<0){
       if(l.status==="לא רלוונטי"||l.status==="נסגר"||l.status==="לפנייה עתידית"||l.status==="נשלחה הצעת מחיר")return false;
