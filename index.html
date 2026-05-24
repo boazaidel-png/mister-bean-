@@ -81,17 +81,7 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
 @media(max-width:900px){.task-board{grid-template-columns:1fr}.task-form-grid{grid-template-columns:1fr}.tasks-wrap{margin-left:10px;margin-right:10px}}
 
 
-/* Custom tab ordering + task filters */
-.tab[draggable="true"]{cursor:grab}
-.tab.dragging{opacity:.45}
-.tab-order-hint{font-size:11px;color:#6b778c;margin:6px 14px 0;font-weight:700}
-.tasks-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid #dfe1e6;border-radius:8px;padding:10px;margin:0 0 12px}
-.tasks-toolbar select,.tasks-toolbar button{border:2px solid #dfe1e6;border-radius:6px;padding:8px 10px;font-size:13px;font-family:inherit;background:#fff;font-weight:800;color:#172b4d}
-.tasks-toolbar button{cursor:pointer}
-.tasks-summary{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px;margin-bottom:12px}
-.task-summary-card{background:#fff;border:1px solid #dfe1e6;border-radius:8px;padding:10px;font-size:12px;font-weight:900;color:#42526e}
-.task-summary-card span{display:block;font-size:20px;color:#0052cc;margin-top:3px}
-@media(max-width:900px){.tasks-summary{grid-template-columns:repeat(2,minmax(100px,1fr))}.tasks-toolbar{margin-left:0;margin-right:0}}
+
 
 
 .tab-order-controls{
@@ -122,6 +112,29 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
 }
 @media(max-width:760px){
   .tab-order-controls{margin-left:10px;margin-right:10px}
+}
+
+
+
+
+
+/* Drag-only tab ordering */
+.tabs.sortable-enabled{user-select:none}
+.tabs.sortable-enabled .tab{
+  cursor:grab;
+  touch-action:manipulation;
+}
+.tabs.sortable-enabled .tab:active{cursor:grabbing}
+.sortable-ghost{opacity:.35}
+.sortable-chosen{box-shadow:0 0 0 2px #0052cc inset}
+.sortable-drag{opacity:.9}
+.tab.dragging{opacity:.45}
+.tab.drag-over{box-shadow:0 0 0 2px #0052cc inset}
+.tab-order-hint{
+  font-size:11px;
+  color:#6b778c;
+  margin:6px 14px 0;
+  font-weight:700;
 }
 
 </style>
@@ -189,6 +202,7 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
 <div id="app"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
 var DB_URL="https://mister-bean-default-rtdb.europe-west1.firebasedatabase.app/leads.json";
 var STATUS_OPTIONS=[
@@ -428,6 +442,106 @@ function getFiltered(){
   });
 }
 
+
+
+
+var tabsSortableInstance=null;
+var nativeDragTab=null;
+var suppressTabClick=false;
+
+function getCurrentTabsFromDom(){
+  return Array.prototype.slice.call(document.querySelectorAll(".tabs [data-tab]")).map(function(el){
+    return el.getAttribute("data-tab");
+  }).filter(Boolean);
+}
+
+function saveCurrentTabOrderFromDom(){
+  var order=getCurrentTabsFromDom();
+  if(order.length){
+    saveTabOrder(order);
+    customTabOrder=order;
+  }
+}
+
+function initNativeTabDrag(el){
+  var buttons=Array.prototype.slice.call(el.querySelectorAll("[data-tab]"));
+  buttons.forEach(function(btn){
+    btn.setAttribute("draggable","true");
+
+    btn.ondragstart=function(e){
+      nativeDragTab=btn.getAttribute("data-tab");
+      suppressTabClick=true;
+      btn.classList.add("dragging");
+      try{
+        e.dataTransfer.effectAllowed="move";
+        e.dataTransfer.setData("text/plain",nativeDragTab);
+      }catch(err){}
+    };
+
+    btn.ondragover=function(e){
+      e.preventDefault();
+      btn.classList.add("drag-over");
+    };
+
+    btn.ondragleave=function(){
+      btn.classList.remove("drag-over");
+    };
+
+    btn.ondrop=function(e){
+      e.preventDefault();
+      var from=nativeDragTab;
+      try{from=e.dataTransfer.getData("text/plain")||from;}catch(err){}
+      var to=btn.getAttribute("data-tab");
+      document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("dragging","drag-over");});
+      if(from&&to&&from!==to){
+        moveTabInOrder(from,to);
+      }
+      setTimeout(function(){suppressTabClick=false;},80);
+    };
+
+    btn.ondragend=function(){
+      document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("dragging","drag-over");});
+      setTimeout(function(){suppressTabClick=false;},80);
+    };
+  });
+}
+
+function initTabsSortable(){
+  var el=document.querySelector(".tabs");
+  if(!el)return;
+
+  el.classList.add("sortable-enabled");
+
+  if(typeof Sortable==="undefined"){
+    initNativeTabDrag(el);
+    return;
+  }
+
+  if(tabsSortableInstance){
+    try{tabsSortableInstance.destroy();}catch(e){}
+    tabsSortableInstance=null;
+  }
+
+  tabsSortableInstance=Sortable.create(el,{
+    animation:160,
+    delay:180,
+    delayOnTouchOnly:true,
+    touchStartThreshold:3,
+    ghostClass:"sortable-ghost",
+    chosenClass:"sortable-chosen",
+    dragClass:"sortable-drag",
+    forceFallback:true,
+    fallbackOnBody:true,
+    swapThreshold:0.65,
+    preventOnFilter:false,
+    onStart:function(){suppressTabClick=true;},
+    onEnd:function(){
+      saveCurrentTabOrderFromDom();
+      setTimeout(function(){suppressTabClick=false;},120);
+    }
+  });
+}
+
 function loadTabOrder(defaultTabs){
   try{
     var saved=JSON.parse(localStorage.getItem("misterBeanTabOrder")||"null");
@@ -447,21 +561,6 @@ function moveTabInOrder(fromTab,toTab){
   if(from<0||to<0||from===to)return;
   var item=order.splice(from,1)[0];
   order.splice(to,0,item);
-  saveTabOrder(order);
-  customTabOrder=order;
-  render();
-}
-
-function moveActiveTab(dir){
-  var defaultTabs=["לטיפול היום","משימות","לידים בתהליך","מתקדם","הצעות","פגישות","לפנייה עתידית","נסגר","לא רלוונטי","נמחקו"];
-  var order=loadTabOrder(defaultTabs);
-  var i=order.indexOf(activeTab);
-  if(i<0)return;
-  var j=i+dir;
-  if(j<0||j>=order.length)return;
-  var tmp=order[i];
-  order[i]=order[j];
-  order[j]=tmp;
   saveTabOrder(order);
   customTabOrder=order;
   render();
@@ -514,7 +613,7 @@ function render(){
     if(t==="נמחקו"&&deletedCount>0)badge=' <span style="background:#6b778c;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px">'+deletedCount+'</span>';
     if(t==="נסגר"&&closedCount>0)badge=' <span style="background:#006644;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px">'+closedCount+'</span>';
     if(t==="לפנייה עתידית"&&futureCount>0)badge=' <span style="background:#5243aa;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px">'+futureCount+'</span>';
-    return '<button class="'+cls+'" draggable="true" data-tab="'+esc(t)+'" ondragstart="event.dataTransfer.setData(\'text/plain\', '+JSON.stringify(t)+');this.classList.add(\'dragging\')" ondragend="this.classList.remove(\'dragging\')" ondragover="event.preventDefault()" ondrop="event.preventDefault();moveTabInOrder(event.dataTransfer.getData(\'text/plain\'), '+JSON.stringify(t)+')" onclick="setTab('+JSON.stringify(t)+')">'+t+badge+'</button>';
+    return '<button type="button" class="'+cls+'" data-tab="'+esc(t)+'" onclick="setTab('+JSON.stringify(t)+')">'+t+badge+'</button>';
   }).join("");
 
   var thHTML=[
@@ -574,14 +673,15 @@ function render(){
   document.getElementById("app").innerHTML=
     '<div class="header"><div><h1>☕ ניהול לידים</h1><p>סביבת עבודה בסגנון Jira • סנכרון ענן</p></div><div class="header-actions"><div class="sync-badge" id="sync-badge" style="color:#79f2c0">✅ '+syncLabel+'</div><button class="btn-tool" onclick="exportToExcel()">⬇️ ייצוא</button><button class="btn-tool" onclick="triggerImport()">⬆️ ייבוא</button><input id="excel-import-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromExcel(event)"><button class="btn-add" onclick="openAdd()">+ ליד</button></div></div>'
     +'<div class="stats">'+statsHTML+'</div>'
-    +'<div class="tabs">'+tabsHTML+'</div><div class="tab-order-controls"><span>סידור כרטיסיות:</span><button onclick="moveActiveTab(-1)">הזז ימינה</button><button onclick="moveActiveTab(1)">הזז שמאלה</button><button onclick="resetTabOrder()">איפוס סדר</button></div>'
+    +'<div class="tabs">'+tabsHTML+'</div><div class="tab-order-hint">לחיצה ארוכה וגרירה לשינוי סדר הכרטיסיות.</div>'
     +'<div class="filters"><input id="search-box" placeholder="🔍 חיפוש..." value="'+esc(search)+'" oninput="setSearch(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><select onchange="setFilterStatus(this.value)"><option'+(filterStatus==="הכל"?" selected":"")+'>הכל</option>'+STATUS_OPTIONS.map(function(s){return '<option'+(filterStatus===s.label?" selected":"")+'>'+s.label+'</option>';}).join("")+'</select><select onchange="setFilterOwner(this.value)"><option'+(filterOwner==="הכל"?" selected":"")+'>הכל</option>'+OWNERS.map(function(o){return '<option'+(filterOwner===o?" selected":"")+'>'+o+'</option>';}).join("")+'</select><span class="count">'+filtered.length+' לידים'+(statLabel?" • "+statLabel:"")+'</span></div>'
     +mainContent;
 
   updateBadge();
   restoreSearchFocusAfterRender();
+  setTimeout(initTabsSortable,0);
 }
-function setTab(t){activeTab=t;statFilter=null;render();}function setFilterStatus(v){filterStatus=v;render();}function setFilterOwner(v){filterOwner=v;render();}function setSort(k){if(sortKey===k)sortDir=sortDir==="asc"?"desc":"asc";else{sortKey=k;sortDir="asc";}render();}function dashboardFilterClick(f){
+function setTab(t){if(suppressTabClick)return;activeTab=t;statFilter=null;render();}function setFilterStatus(v){filterStatus=v;render();}function setFilterOwner(v){filterOwner=v;render();}function setSort(k){if(sortKey===k)sortDir=sortDir==="asc"?"desc":"asc";else{sortKey=k;sortDir="asc";}render();}function dashboardFilterClick(f){
   statFilter=null;
 
   if(f==="__משימות"){activeTab="משימות";
@@ -899,9 +999,6 @@ function rowToLead(row){return normalizeLead({id:Date.now()+Math.floor(Math.rand
 function importFromExcel(event){var file=event.target.files&&event.target.files[0];if(!file)return;if(!window.XLSX){alert("רכיב הייבוא לא נטען. בדוק חיבור אינטרנט.");return;}var reader=new FileReader();reader.onload=function(e){try{var data=new Uint8Array(e.target.result),wb=XLSX.read(data,{type:"array"}),ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{defval:""}),imported=rows.map(rowToLead).filter(function(l){return l.company;});if(!imported.length){alert("לא נמצאו שורות עם שם חברה בקובץ.");return;}var replace=confirm("נמצאו "+imported.length+" לידים בקובץ.\n\nאישור = להחליף את כל הרשימה הקיימת.\nביטול = להוסיף לרשימה הקיימת.");var skippedDuplicates=0;var finalImported=imported;if(!replace){finalImported=imported.filter(function(l){if(findDuplicateLead(l,null)){skippedDuplicates++;return false;}return true;});}var nl=replace?imported:leads.concat(finalImported);saveLeads(nl).then(function(){render();alert("הייבוא הסתיים בהצלחה."+ (skippedDuplicates? "\nדולגו "+skippedDuplicates+" לידים כפולים.":""));}).catch(function(){render();alert("הייבוא נשמר מקומית, אבל לא הסתנכרן לענן.");});}catch(err){alert("שגיאה בייבוא הקובץ. ודא שזה קובץ Excel או CSV תקין.");}};reader.readAsArrayBuffer(file);}
 
 document.addEventListener("click",function(e){
-  var tab=e.target.closest("[data-tab]");
-  if(tab){setTab(tab.getAttribute("data-tab"));return;}
-
   var stat=e.target.closest("[data-stat-filter]");
   if(stat){
     var v=stat.getAttribute("data-stat-filter");
