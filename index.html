@@ -147,7 +147,7 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
 @media(max-width:760px){
   .tabs{
     padding-bottom:2px;
-    scroll-snap-type:x proximity;
+    scroll-snap-type:none;
   }
   .tabs .tab{
     scroll-snap-align:start;
@@ -160,22 +160,20 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
     display:flex!important;
     font-size:10px;
     padding:5px 7px;
-    max-width:190px;
+    max-width:120px;
     overflow:hidden;
     text-overflow:ellipsis;
   }
 }
 
 
+/* Keep selected tab visible without mobile snap-back */
+.tabs .tab.active{
+  scroll-margin-inline:40px;
+}
 @media(max-width:760px){
-  .header-actions{
-    width:100%;
-    justify-content:flex-start;
-  }
-  .sync-badge{
-    display:flex!important;
-    max-width:190px!important;
-    white-space:nowrap;
+  .tabs{
+    scroll-behavior:auto;
   }
 }
 
@@ -367,7 +365,7 @@ function processFutureLeads(){
 }
 
 function saveLeads(nl){leads=normalizeLeadsList(nl);saveLocalBackup(leads);syncStatus="syncing";updateBadge();return fbWrite(leads).then(function(){lastSync=new Date();syncStatus="ok";updateBadge();return true;}).catch(function(){syncStatus="error";updateBadge();throw new Error("sync failed");});}
-function updateBadge(){var b=document.getElementById("sync-badge");if(!b)return;var ic={idle:"⏳",syncing:"🔄",ok:"✅",error:"❌"},cl={idle:"#deebff",syncing:"#ffab00",ok:"#79f2c0",error:"#ffbdad"},lb={idle:"ממתין",syncing:"שומר...",ok:lastSync?("עודכן לאחרונה: "+lastSync.toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})):"עודכן לאחרונה: —",error:"שגיאה"};b.style.color=cl[syncStatus];b.innerHTML=ic[syncStatus]+" "+lb[syncStatus];}
+function updateBadge(){var b=document.getElementById("sync-badge");if(!b)return;var ic={idle:"⏳",syncing:"🔄",ok:"✅",error:"❌"},cl={idle:"#deebff",syncing:"#ffab00",ok:"#79f2c0",error:"#ffbdad"},lb={idle:"ממתין",syncing:"שומר...",ok:lastSync?("עודכן "+lastSync.toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})):"מסונכרן",error:"שגיאה"};b.style.color=cl[syncStatus];b.innerHTML=ic[syncStatus]+" "+lb[syncStatus];}
 function init(){
   fbRead().then(function(d){leads=normalizeLeadsList((d&&Array.isArray(d))?d:(loadLocalBackup()||[]));saveLocalBackup(leads);lastSync=new Date();syncStatus="ok";processFutureLeads();render();}).catch(function(){leads=normalizeLeadsList(loadLocalBackup()||[]);syncStatus="error";processFutureLeads();render();});
   setInterval(function(){var modalOpen=document.getElementById("modal-wrap")&&document.getElementById("modal-wrap").classList.contains("open");var active=document.activeElement;var typing=active&&["INPUT","TEXTAREA","SELECT"].indexOf(active.tagName)>=0;if(modalOpen||typing)return;fbRead().then(function(d){if(d&&Array.isArray(d)){leads=normalizeLeadsList(d);saveLocalBackup(leads);lastSync=new Date();syncStatus="ok";processFutureLeads();render();}}).catch(function(){syncStatus="error";updateBadge();});},15000);
@@ -508,6 +506,23 @@ function saveTabOrder(order){
 }
 
 
+
+function keepActiveTabVisible(){
+  var wrap=document.querySelector(".tabs");
+  if(!wrap)return;
+  var active=wrap.querySelector(".tab.active");
+  if(!active)return;
+
+  setTimeout(function(){
+    try{
+      active.scrollIntoView({behavior:"auto",block:"nearest",inline:"center"});
+    }catch(e){
+      var target=active.offsetLeft-(wrap.clientWidth/2)+(active.clientWidth/2);
+      wrap.scrollLeft=target;
+    }
+  },0);
+}
+
 function render(){
   preserveSearchFocusBeforeRender();
   processFutureLeads();
@@ -600,7 +615,7 @@ function render(){
       +'</div>';
   }).join("");
 
-  var syncLabel=lastSync?("עודכן לאחרונה: "+lastSync.toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})):"עודכן לאחרונה: —";
+  var syncLabel=lastSync?("עודכן "+lastSync.toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})):"מסונכרן";
   var statLabel=statFilter?(statFilter==="__בטיפול"?"לידים בתהליך":(statFilter==="__היום"?"לטיפול היום":(statFilter==="__פולואפ"?"פולואפ להיום":statFilter))):"";
 
   var mainContent=activeTab==="משימות"?renderTasksBoard():('<div class="table-wrap"><table><thead><tr>'+thHTML+'</tr></thead><tbody>'+rowsHTML+'</tbody></table></div><div class="cards">'+cardsHTML+'</div>');
@@ -613,6 +628,7 @@ function render(){
 
   updateBadge();
   restoreSearchFocusAfterRender();
+  keepActiveTabVisible();
   
 }
 function setTab(t){activeTab=t;statFilter=null;render();}function setFilterStatus(v){filterStatus=v;render();}function setFilterOwner(v){filterOwner=v;render();}function setSort(k){if(sortKey===k)sortDir=sortDir==="asc"?"desc":"asc";else{sortKey=k;sortDir="asc";}render();}function dashboardFilterClick(f){
