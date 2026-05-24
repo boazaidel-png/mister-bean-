@@ -75,7 +75,7 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
 .lead-task-row:last-child{border-bottom:none}
 .lead-task-main{font-size:12px;color:#172b4d;line-height:1.4}.lead-task-main strong{font-weight:900}
 .lead-task-actions{display:flex;gap:5px;flex-wrap:wrap}
-.task-form-grid{display:grid;grid-template-columns:1.4fr .8fr .8fr .8fr;gap:8px;margin-top:8px}
+.task-form-grid{display:grid;grid-template-columns:1.4fr .8fr .7fr .8fr .8fr;gap:8px;margin-top:8px}
 .task-form-grid input,.task-form-grid select{border:2px solid #dfe1e6;border-radius:6px;padding:9px 10px;font-size:14px;font-family:inherit;background:#fff}
 .btn-task-add{background:#0052cc;color:#fff;border:none;border-radius:6px;padding:10px 12px;font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;margin-top:8px}
 @media(max-width:900px){.task-board{grid-template-columns:1fr}.task-form-grid{grid-template-columns:1fr}.tasks-wrap{margin-left:10px;margin-right:10px}}
@@ -92,6 +92,37 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
 .task-summary-card{background:#fff;border:1px solid #dfe1e6;border-radius:8px;padding:10px;font-size:12px;font-weight:900;color:#42526e}
 .task-summary-card span{display:block;font-size:20px;color:#0052cc;margin-top:3px}
 @media(max-width:900px){.tasks-summary{grid-template-columns:repeat(2,minmax(100px,1fr))}.tasks-toolbar{margin-left:0;margin-right:0}}
+
+
+.tab-order-controls{
+  display:flex;
+  gap:6px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin:6px 14px 0;
+  font-size:11px;
+  color:#6b778c;
+  font-weight:800;
+}
+.tab-order-controls button{
+  border:1px solid #dfe1e6;
+  background:#fff;
+  color:#0052cc;
+  border-radius:6px;
+  padding:5px 8px;
+  font-size:11px;
+  font-weight:900;
+  cursor:pointer;
+  font-family:inherit;
+}
+.task-mini-btn.calendar{
+  background:#deebff;
+  color:#0747a6;
+  border-color:#b3d4ff;
+}
+@media(max-width:760px){
+  .tab-order-controls{margin-left:10px;margin-right:10px}
+}
 
 </style>
 </head>
@@ -133,6 +164,7 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
     <div class="task-form-grid">
       <input id="task_title" type="text" placeholder="משימה חדשה" autocomplete="off">
       <input id="task_dueDate" type="date">
+      <input id="task_dueTime" type="time">
       <select id="task_priority"><option>בינונית</option><option>גבוהה</option><option>נמוכה</option></select>
       <select id="task_owner"></select>
     </div>
@@ -205,6 +237,7 @@ function normalizeTask(t,lead){
   if(!t.priority)t.priority=(lead&&lead.priority)||"בינונית";
   if(!t.owner)t.owner=(lead&&lead.owner)||"בועז";
   if(!t.dueDate)t.dueDate=(lead&&lead.followUpDate)||"";
+  if(!t.dueTime)t.dueTime="09:00";
   if(!t.note)t.note="";
   if(!t.createdAt)t.createdAt=today();
   if(!t.updatedAt)t.updatedAt=today();
@@ -418,6 +451,22 @@ function moveTabInOrder(fromTab,toTab){
   customTabOrder=order;
   render();
 }
+
+function moveActiveTab(dir){
+  var defaultTabs=["לטיפול היום","משימות","לידים בתהליך","מתקדם","הצעות","פגישות","לפנייה עתידית","נסגר","לא רלוונטי","נמחקו"];
+  var order=loadTabOrder(defaultTabs);
+  var i=order.indexOf(activeTab);
+  if(i<0)return;
+  var j=i+dir;
+  if(j<0||j>=order.length)return;
+  var tmp=order[i];
+  order[i]=order[j];
+  order[j]=tmp;
+  saveTabOrder(order);
+  customTabOrder=order;
+  render();
+}
+
 function resetTabOrder(){
   localStorage.removeItem("misterBeanTabOrder");
   customTabOrder=null;
@@ -525,7 +574,7 @@ function render(){
   document.getElementById("app").innerHTML=
     '<div class="header"><div><h1>☕ ניהול לידים</h1><p>סביבת עבודה בסגנון Jira • סנכרון ענן</p></div><div class="header-actions"><div class="sync-badge" id="sync-badge" style="color:#79f2c0">✅ '+syncLabel+'</div><button class="btn-tool" onclick="exportToExcel()">⬇️ ייצוא</button><button class="btn-tool" onclick="triggerImport()">⬆️ ייבוא</button><input id="excel-import-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromExcel(event)"><button class="btn-add" onclick="openAdd()">+ ליד</button></div></div>'
     +'<div class="stats">'+statsHTML+'</div>'
-    +'<div class="tabs">'+tabsHTML+'</div><div class="tab-order-hint">אפשר לגרור כרטיסיות כדי לשנות סדר. <button onclick="resetTabOrder()" style="border:0;background:transparent;color:#0052cc;font-weight:900;cursor:pointer;font-family:inherit">איפוס סדר</button></div>'
+    +'<div class="tabs">'+tabsHTML+'</div><div class="tab-order-controls"><span>סידור כרטיסיות:</span><button onclick="moveActiveTab(-1)">הזז ימינה</button><button onclick="moveActiveTab(1)">הזז שמאלה</button><button onclick="resetTabOrder()">איפוס סדר</button></div>'
     +'<div class="filters"><input id="search-box" placeholder="🔍 חיפוש..." value="'+esc(search)+'" oninput="setSearch(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><select onchange="setFilterStatus(this.value)"><option'+(filterStatus==="הכל"?" selected":"")+'>הכל</option>'+STATUS_OPTIONS.map(function(s){return '<option'+(filterStatus===s.label?" selected":"")+'>'+s.label+'</option>';}).join("")+'</select><select onchange="setFilterOwner(this.value)"><option'+(filterOwner==="הכל"?" selected":"")+'>הכל</option>'+OWNERS.map(function(o){return '<option'+(filterOwner===o?" selected":"")+'>'+o+'</option>';}).join("")+'</select><span class="count">'+filtered.length+' לידים'+(statLabel?" • "+statLabel:"")+'</span></div>'
     +mainContent;
 
@@ -658,9 +707,10 @@ function renderLeadTasks(){
     }).map(function(t){
       var due=isTaskDue(t),over=isTaskOverdue(t);
       return '<div class="lead-task-row" style="'+(over?'background:#ffebe6;padding-right:6px;border-radius:6px':(due?'background:#fff7d6;padding-right:6px;border-radius:6px':''))+'">'
-        +'<div class="lead-task-main"><strong>'+esc(t.title)+'</strong><br><span>'+esc(t.status)+' • '+esc(t.priority)+' • '+esc(t.owner)+(t.dueDate?' • יעד: '+fmtDate(t.dueDate):'')+'</span></div>'
+        +'<div class="lead-task-main"><strong>'+esc(t.title)+'</strong><br><span>'+esc(t.status)+' • '+esc(t.priority)+' • '+esc(t.owner)+(t.dueDate?' • יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+t.dueTime:''):'')+'</span></div>'
         +'<div class="lead-task-actions">'
         +'<button class="task-mini-btn" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בטיפול\')">בטיפול</button>'
+        +'<button class="task-mini-btn calendar" onclick="addCurrentLeadTaskToCalendar('+JSON.stringify(t.id)+')">📅 יומן</button>'
         +'<button class="task-mini-btn done" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בוצעה\')">בוצע</button>'
         +'<button class="task-mini-btn snooze" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'נדחתה\')">נדחה</button>'
         +'<button class="task-mini-btn cancel" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בוטלה\')">בוטל</button>'
@@ -677,6 +727,7 @@ function addTaskToCurrentLead(){
   var t=normalizeTask({
     title:title,
     dueDate:(document.getElementById("task_dueDate")||{}).value||"",
+    dueTime:(document.getElementById("task_dueTime")||{}).value||"09:00",
     priority:(document.getElementById("task_priority")||{}).value||"בינונית",
     owner:(document.getElementById("task_owner")||{}).value||currentLead.owner||"בועז",
     status:"פתוחה",
@@ -688,6 +739,7 @@ function addTaskToCurrentLead(){
   currentLead.lastUpdated=today();
   var titleEl=document.getElementById("task_title");if(titleEl)titleEl.value="";
   var dateEl=document.getElementById("task_dueDate");if(dateEl)dateEl.value="";
+  var timeEl=document.getElementById("task_dueTime");if(timeEl)timeEl.value="09:00";
   renderLeadTasks();
 }
 function updateTaskInCurrentLead(taskId,status){
@@ -718,6 +770,60 @@ function resetTaskFilters(){
   taskStatusQuickFilter="הכל";
   render();
 }
+
+function pad2(n){return String(n).padStart(2,"0");}
+function dateTimeForICS(date,time){
+  if(!date)return "";
+  var p=date.split("-");
+  var t=(time||"09:00").split(":");
+  return p[0]+p[1]+p[2]+"T"+pad2(t[0]||"09")+pad2(t[1]||"00")+"00";
+}
+function addOneHourICS(dt){
+  if(!dt)return "";
+  var y=Number(dt.slice(0,4)),m=Number(dt.slice(4,6))-1,d=Number(dt.slice(6,8)),h=Number(dt.slice(9,11)),mi=Number(dt.slice(11,13));
+  var date=new Date(y,m,d,h,mi,0);
+  date.setHours(date.getHours()+1);
+  return date.getFullYear()+pad2(date.getMonth()+1)+pad2(date.getDate())+"T"+pad2(date.getHours())+pad2(date.getMinutes())+"00";
+}
+function downloadICS(title,description,date,time){
+  if(!date){alert("כדי להוסיף ליומן צריך להגדיר תאריך יעד למשימה.");return;}
+  var start=dateTimeForICS(date,time||"09:00");
+  var end=addOneHourICS(start);
+  var ics="BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Mister Bean Leads//Tasks//HE\nBEGIN:VEVENT\nUID:"+Date.now()+"@mister-bean-leads\nSUMMARY:"+title.replace(/\n/g," ")+"\nDTSTART:"+start+"\nDTEND:"+end+"\nDESCRIPTION:"+description.replace(/\n/g,"\\n")+"\nEND:VEVENT\nEND:VCALENDAR";
+  var blob=new Blob([ics],{type:"text/calendar;charset=utf-8"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=title.replace(/[^\u0590-\u05FFa-zA-Z0-9]+/g,"-")+".ics";
+  a.click();
+}
+function buildTaskCalendarDescription(lead,task){
+  return "משימה: "+(task.title||"")+"\n"
+    +"ליד: "+(lead.company||"")+"\n"
+    +"איש קשר: "+(lead.contact||"")+"\n"
+    +"טלפון: "+(lead.phone||"")+"\n"
+    +"מייל: "+(lead.email||"")+"\n"
+    +"סטטוס ליד: "+(lead.status||"")+"\n"
+    +"עדיפות משימה: "+(task.priority||"")+"\n"
+    +"אחראי: "+(task.owner||"");
+}
+function addTaskToCalendar(leadId,taskId){
+  var lead=leads.find(function(l){return String(l.id)===String(leadId);});
+  if(!lead)return;
+  lead=normalizeLead(lead);
+  var task=(lead.tasks||[]).find(function(t){return String(t.id)===String(taskId);});
+  if(!task)return;
+  task=normalizeTask(task,lead);
+  downloadICS("משימה: "+task.title+" - "+lead.company,buildTaskCalendarDescription(lead,task),task.dueDate,task.dueTime||"09:00");
+}
+function addCurrentLeadTaskToCalendar(taskId){
+  if(!currentLead)return;
+  currentLead=normalizeLead(currentLead);
+  var task=(currentLead.tasks||[]).find(function(t){return String(t.id)===String(taskId);});
+  if(!task)return;
+  task=normalizeTask(task,currentLead);
+  downloadICS("משימה: "+task.title+" - "+currentLead.company,buildTaskCalendarDescription(currentLead,task),task.dueDate,task.dueTime||"09:00");
+}
+
 function renderTasksBoard(){
   var statuses=["פתוחה","בטיפול","נדחתה","בוצעה","בוטלה"];
   var tasks=getAllTasks();
@@ -768,8 +874,9 @@ function renderTasksBoard(){
         var t=x.task,l=x.lead,over=isTaskOverdue(t),due=isTaskDue(t);
         return '<div class="task-card '+(over?'overdue':(due?'today':''))+'">'
           +'<div class="task-title">'+esc(t.title)+'</div>'
-          +'<div class="task-meta">ליד: <a href="#" onclick="event.preventDefault();openEdit('+JSON.stringify(l.id)+')">'+esc(l.company)+'</a><br>אחראי: '+esc(t.owner)+' • עדיפות: '+esc(t.priority)+'<br>'+(t.dueDate?'יעד: '+fmtDate(t.dueDate)+'<br>':'')+'סטטוס ליד: '+esc(l.status)+'</div>'
+          +'<div class="task-meta">ליד: <a href="#" onclick="event.preventDefault();openEdit('+JSON.stringify(l.id)+')">'+esc(l.company)+'</a><br>אחראי: '+esc(t.owner)+' • עדיפות: '+esc(t.priority)+'<br>'+(t.dueDate?'יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+t.dueTime:'')+'<br>':'')+'סטטוס ליד: '+esc(l.status)+'</div>'
           +'<div class="task-actions">'
+          +'<button class="task-mini-btn calendar" onclick="addTaskToCalendar('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+')">📅 יומן</button>'
           +(st!=="בטיפול"?'<button class="task-mini-btn" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בטיפול\')">בטיפול</button>':'')
           +(st!=="בוצעה"?'<button class="task-mini-btn done" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בוצעה\')">בוצע</button>':'')
           +(st!=="נדחתה"?'<button class="task-mini-btn snooze" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'נדחתה\')">נדחה</button>':'')
@@ -784,7 +891,7 @@ function buildGCalLink(){var company=g("f_company"),date=g("f_meetingDate"),time
 function openGCal(){var link=buildGCalLink();if(!link){alert("נא להזין תאריך לפגישה");return;}window.open(link,"_blank");}
 function buildICS(){var company=g("f_company")||"פגישה",date=g("f_meetingDate"),time=g("f_meetingTime")||"09:00",loc=g("f_meetingLocation"),guest=g("f_meetingGuest");if(!date){alert("נא להזין תאריך לפגישה");return;}var p=date.split("-"),tp=time.split(":"),pad=function(n){return String(n).padStart(2,"0");},start=p[0]+p[1]+p[2]+"T"+pad(tp[0])+pad(tp[1]||"00")+"00",endH=String((parseInt(tp[0],10)+1)%24).padStart(2,"0"),end=p[0]+p[1]+p[2]+"T"+endH+pad(tp[1]||"00")+"00",att=guest?"ATTENDEE;RSVP=TRUE:mailto:"+guest+"\n":"",ics="BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nUID:"+Date.now()+"@leads\nSUMMARY:פגישה — "+company+"\nDTSTART:"+start+"\nDTEND:"+end+"\nLOCATION:"+loc+"\n"+att+"END:VEVENT\nEND:VCALENDAR",blob=new Blob([ics],{type:"text/calendar"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="פגישה-"+company+".ics";a.click();}
 function safeExcelValue(v){return v===undefined||v===null?"":String(v);}
-function exportToExcel(){var data=leads.filter(function(l){return!l.deleted;}).map(function(l){l=normalizeLead(l);return{"שם חברה":safeExcelValue(l.company),"כמות עובדים":l.employees||"","מיקום":safeExcelValue(l.location),"חיבור":safeExcelValue(l.connection),"איש קשר":safeExcelValue(l.contact),"תפקיד":safeExcelValue(l.role),"טלפון":safeExcelValue(l.phone),"מייל":safeExcelValue(l.email),"אחראי":safeExcelValue(l.owner),"רמת עדיפות":safeExcelValue(l.priority),"תאריך פולואפ":safeExcelValue(l.followUpDate),"מצב קיים":safeExcelValue(l.currentStatus),"סטטוס":safeExcelValue(l.status),"מספר משימות פתוחות":getOpenTasks(l).length,"הערות":safeExcelValue(l.notes),"האם בחוזה קיים":safeExcelValue(l.hasContract),"ספק":safeExcelValue(l.supplier),"סוג מכונות":safeExcelValue(l.machineType),"כמות מכונות":safeExcelValue(l.machineCount),"צריכה חודשית קיימת/משוערת":safeExcelValue(l.monthlyConsumption),"מחיר לקילו":safeExcelValue(l.pricePerKg),"תאריך עדכון":safeExcelValue(l.lastUpdated),"כרטיסייה":safeExcelValue(l.sheet),"תאריך פגישה":safeExcelValue(l.meetingDate),"שעת פגישה":safeExcelValue(l.meetingTime),"מיקום פגישה":safeExcelValue(l.meetingLocation),"מייל לזימון":safeExcelValue(l.meetingGuest)};});if(!data.length){alert("אין לידים לייצוא");return;}if(!window.XLSX){alert("רכיב הייצוא לא נטען. בדוק חיבור אינטרנט.");return;}var ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Leads");XLSX.writeFile(wb,"mister-bean-leads-"+today()+".xlsx");}
+function exportToExcel(){var data=leads.filter(function(l){return!l.deleted;}).map(function(l){l=normalizeLead(l);return{"שם חברה":safeExcelValue(l.company),"כמות עובדים":l.employees||"","מיקום":safeExcelValue(l.location),"חיבור":safeExcelValue(l.connection),"איש קשר":safeExcelValue(l.contact),"תפקיד":safeExcelValue(l.role),"טלפון":safeExcelValue(l.phone),"מייל":safeExcelValue(l.email),"אחראי":safeExcelValue(l.owner),"רמת עדיפות":safeExcelValue(l.priority),"תאריך פולואפ":safeExcelValue(l.followUpDate),"מצב קיים":safeExcelValue(l.currentStatus),"סטטוס":safeExcelValue(l.status),"מספר משימות פתוחות":getOpenTasks(l).length,"שעת משימה קרובה":(getNextTask(l)?getNextTask(l).dueTime:""),"הערות":safeExcelValue(l.notes),"האם בחוזה קיים":safeExcelValue(l.hasContract),"ספק":safeExcelValue(l.supplier),"סוג מכונות":safeExcelValue(l.machineType),"כמות מכונות":safeExcelValue(l.machineCount),"צריכה חודשית קיימת/משוערת":safeExcelValue(l.monthlyConsumption),"מחיר לקילו":safeExcelValue(l.pricePerKg),"תאריך עדכון":safeExcelValue(l.lastUpdated),"כרטיסייה":safeExcelValue(l.sheet),"תאריך פגישה":safeExcelValue(l.meetingDate),"שעת פגישה":safeExcelValue(l.meetingTime),"מיקום פגישה":safeExcelValue(l.meetingLocation),"מייל לזימון":safeExcelValue(l.meetingGuest)};});if(!data.length){alert("אין לידים לייצוא");return;}if(!window.XLSX){alert("רכיב הייצוא לא נטען. בדוק חיבור אינטרנט.");return;}var ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Leads");XLSX.writeFile(wb,"mister-bean-leads-"+today()+".xlsx");}
 function triggerImport(){var input=document.getElementById("excel-import-input");if(input){input.value="";input.click();}}
 function pick(row,names){for(var i=0;i<names.length;i++){if(row[names[i]]!==undefined&&row[names[i]]!==null&&String(row[names[i]]).trim()!=="")return String(row[names[i]]).trim();}return"";}
 function excelDateToISO(v){if(!v)return"";if(typeof v==="number"&&window.XLSX&&XLSX.SSF){var d=XLSX.SSF.parse_date_code(v);if(d)return String(d.y).padStart(4,"0")+"-"+String(d.m).padStart(2,"0")+"-"+String(d.d).padStart(2,"0");}var s=String(v).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){var p=s.split("/");return p[2]+"-"+p[1].padStart(2,"0")+"-"+p[0].padStart(2,"0");}return s;}
