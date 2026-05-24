@@ -88,6 +88,7 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
       <div class="field"><label>מחיר לקילו</label><input id="f_pricePerKg" type="number" inputmode="decimal" step="0.01"></div>
     </div>
 
+    <div class="field"><label>פעולה הבאה</label><input id="f_nextAction" type="text" autocomplete="off" placeholder="לדוגמה: להתקשר, לשלוח הצעה, לקבוע פגישה"></div>
     <div class="field"><label>הערות</label><textarea id="f_notes" rows="3"></textarea></div>
     <div class="field"><label>תאריך עדכון אחרון</label><input type="text" id="f_lastUpdatedDisplay" readonly style="background:#f4f5f7;color:#5e6c84"></div>
 
@@ -139,7 +140,7 @@ function saveLocalBackup(d){try{localStorage.setItem("misterBeanLeadsBackup",JSO
 function normalizeLead(l){
   l=l||{}; if(OLD_STATUS_MAP[l.status])l.status=OLD_STATUS_MAP[l.status];
   if(l.phone&&!l.email&&String(l.phone).indexOf("@")>=0){l.email=l.phone;l.phone="";}
-  ["company","location","connection","contact","role","phone","email","currentStatus","notes","meetingDate","meetingLocation","meetingGuest","followUpDate","hasContract","supplier","machineType","monthlyConsumption","pricePerKg"].forEach(function(k){if(l[k]===undefined||l[k]===null)l[k]="";});
+  ["company","location","connection","contact","role","phone","email","currentStatus","notes","nextAction","meetingDate","meetingLocation","meetingGuest","followUpDate","hasContract","supplier","machineType","monthlyConsumption","pricePerKg"].forEach(function(k){if(l[k]===undefined||l[k]===null)l[k]="";});
   if(!l.id)l.id=Date.now()+Math.floor(Math.random()*100000);
   if(!l.employees)l.employees=0; if(!l.owner)l.owner="בועז"; if(!l.status)l.status="לא טופל"; if(!l.sheet)l.sheet="ראשוני"; if(!l.lastUpdated)l.lastUpdated=today(); if(!l.meetingTime)l.meetingTime="09:00"; if(!l.priority)l.priority="בינונית"; if(l.machineCount===undefined)l.machineCount=""; if(l.deleted===undefined)l.deleted=false;
   return l;
@@ -148,7 +149,11 @@ function normalizeLeadsList(a){return(Array.isArray(a)?a:[]).map(function(l){ret
 
 function isActiveProcessLead(l){
   l=normalizeLead(l);
-  return !l.deleted && l.status!=="לא רלוונטי" && l.status!=="נסגר" && l.status!=="לפנייה עתידית";
+  return !l.deleted
+    && l.status!=="לא רלוונטי"
+    && l.status!=="נסגר"
+    && l.status!=="לפנייה עתידית"
+    && l.status!=="נשלחה הצעת מחיר";
 }
 function processFutureLeads(){
   var changed=false;
@@ -172,6 +177,36 @@ function init(){
   fbRead().then(function(d){leads=normalizeLeadsList((d&&Array.isArray(d))?d:(loadLocalBackup()||[]));saveLocalBackup(leads);lastSync=new Date();syncStatus="ok";processFutureLeads();render();}).catch(function(){leads=normalizeLeadsList(loadLocalBackup()||[]);syncStatus="error";processFutureLeads();render();});
   setInterval(function(){var modalOpen=document.getElementById("modal-wrap")&&document.getElementById("modal-wrap").classList.contains("open");var active=document.activeElement;var typing=active&&["INPUT","TEXTAREA","SELECT"].indexOf(active.tagName)>=0;if(modalOpen||typing)return;fbRead().then(function(d){if(d&&Array.isArray(d)){leads=normalizeLeadsList(d);saveLocalBackup(leads);lastSync=new Date();syncStatus="ok";processFutureLeads();render();}}).catch(function(){syncStatus="error";updateBadge();});},15000);
 }
+
+function isTodayWorkLead(l){
+  l=normalizeLead(l);
+  return isActiveProcessLead(l) && (isDue(l.followUpDate) || l.priority==="גבוהה");
+}
+function cleanKey(v){
+  return String(v||"").trim().toLowerCase().replace(/\s+/g," ");
+}
+function cleanPhone(v){
+  return String(v||"").replace(/[^\d]/g,"");
+}
+function findDuplicateLead(candidate, excludeId){
+  candidate=normalizeLead(candidate);
+  var cCompany=cleanKey(candidate.company);
+  var cPhone=cleanPhone(candidate.phone);
+  var cEmail=cleanKey(candidate.email);
+
+  return leads.find(function(l){
+    l=normalizeLead(l);
+    if(l.deleted) return false;
+    if(excludeId && String(l.id)===String(excludeId)) return false;
+
+    var sameCompany=cCompany && cleanKey(l.company)===cCompany;
+    var samePhone=cPhone && cleanPhone(l.phone)===cPhone;
+    var sameEmail=cEmail && cleanKey(l.email)===cEmail;
+
+    return sameCompany || samePhone || sameEmail;
+  });
+}
+
 function sOpt(s){return STATUS_OPTIONS.filter(function(x){return x.label===s;})[0]||STATUS_OPTIONS[0];}
 function ownerStyle(o){if(o==="בועז")return"background:#deebff;color:#0747a6";if(o==="בר")return"background:#e3fcef;color:#006644";return"background:#fff0b3;color:#7a5d00";}
 function pClass(p){if(p==="גבוהה")return"priority-high";if(p==="נמוכה")return"priority-low";return"priority-medium";}
@@ -211,29 +246,30 @@ function getFiltered(){
     if(activeTab==="נמחקו"&&!l.deleted)return false;
     if(activeTab!=="נמחקו"&&l.deleted)return false;
 
+    if(activeTab==="לטיפול היום"&&!isTodayWorkLead(l))return false;
     if(activeTab==="לידים בתהליך"&&!isActiveProcessLead(l))return false;
     if(activeTab==="לא רלוונטי"&&l.status!=="לא רלוונטי")return false;
     if(activeTab==="נסגר"&&l.status!=="נסגר")return false;
     if(activeTab==="לפנייה עתידית"&&l.status!=="לפנייה עתידית")return false;
     if(activeTab==="הצעות"&&l.status!=="נשלחה הצעת מחיר")return false;
     if(activeTab==="פגישות"&&l.status!=="נקבעה פגישה")return false;
-    if(activeTab==="מתקדם"&&l.sheet!=="מתקדם")return false;
-    if(activeTab==="ראשוני"&&l.sheet!=="ראשוני")return false;
+    if(activeTab==="מתקדם"&&["בהמתנה לקביעת פגישה","נקבעה פגישה"].indexOf(l.status)<0)return false;
 
-    if(["לא רלוונטי","נסגר","לפנייה עתידית","נמחקו"].indexOf(activeTab)<0){
-      if(l.status==="לא רלוונטי"||l.status==="נסגר"||l.status==="לפנייה עתידית")return false;
+    if(["לא רלוונטי","נסגר","לפנייה עתידית","נמחקו","הצעות"].indexOf(activeTab)<0){
+      if(l.status==="לא רלוונטי"||l.status==="נסגר"||l.status==="לפנייה עתידית"||l.status==="נשלחה הצעת מחיר")return false;
     }
 
     if(statFilter==="__בטיפול"&&!isActiveProcessLead(l))return false;
+    if(statFilter==="__היום"&&!isTodayWorkLead(l))return false;
     if(statFilter==="__פולואפ"&&!isDue(l.followUpDate))return false;
-    if(statFilter&&statFilter!=="__בטיפול"&&statFilter!=="__פולואפ"&&l.status!==statFilter)return false;
+    if(statFilter&&statFilter!=="__בטיפול"&&statFilter!=="__פולואפ"&&statFilter!=="__היום"&&l.status!==statFilter)return false;
 
     if(filterStatus!=="הכל"&&l.status!==filterStatus)return false;
     if(filterOwner!=="הכל"&&l.owner!==filterOwner)return false;
 
     if(search){
       var q=search.toLowerCase();
-      return [l.company,l.contact,l.connection,l.phone,l.email,l.notes,l.location,l.role,l.currentStatus,l.supplier,l.machineType,l.monthlyConsumption].some(function(v){
+      return [l.company,l.contact,l.connection,l.phone,l.email,l.notes,l.location,l.role,l.currentStatus,l.nextAction,l.supplier,l.machineType,l.monthlyConsumption].some(function(v){
         return (v||"").toLowerCase().indexOf(q)>=0;
       });
     }
@@ -272,13 +308,13 @@ function render(){
   var statsData=[
     {label:"לידים בתהליך",value:activeLeads.length,color:"#0052cc",icon:"📋",filter:"__בטיפול"},
     {label:"טרם טופלו",value:leads.filter(function(l){return !l.deleted&&l.status==="לא טופל";}).length,color:"#6b778c",icon:"🕘",filter:"לא טופל"},
-    {label:"פולואפ להיום",value:leads.filter(function(l){return !l.deleted&&isDue(l.followUpDate)&&l.status!=="נסגר"&&l.status!=="לא רלוונטי";}).length,color:"#ffab00",icon:"🔔",filter:"__פולואפ"},
+    {label:"לטיפול היום",value:leads.filter(function(l){return isTodayWorkLead(l);}).length,color:"#ffab00",icon:"🔔",filter:"__היום"},
     {label:"לפנייה עתידית",value:futureCount,color:"#5243aa",icon:"⏰",filter:"לפנייה עתידית"},
     {label:"פגישות",value:leads.filter(function(l){return !l.deleted&&l.status==="נקבעה פגישה";}).length,color:"#6554c0",icon:"📅",filter:"נקבעה פגישה"},
     {label:"הצעות מחיר",value:leads.filter(function(l){return !l.deleted&&l.status==="נשלחה הצעת מחיר";}).length,color:"#00875a",icon:"📨",filter:"נשלחה הצעת מחיר"}
   ];
 
-  var tabs=["לידים בתהליך","ראשוני","מתקדם","הצעות","פגישות","לפנייה עתידית","נסגר","לא רלוונטי","נמחקו"];
+  var tabs=["לטיפול היום","לידים בתהליך","מתקדם","הצעות","פגישות","לפנייה עתידית","נסגר","לא רלוונטי","נמחקו"];
 
   var statsHTML=statsData.map(function(s){
     var active=statFilter===s.filter&&s.filter?'style="border-top:4px solid '+s.color+';box-shadow:0 0 0 2px '+s.color+'"':'style="border-top:4px solid '+s.color+'"';
@@ -335,7 +371,7 @@ function render(){
     extra+='<div class="card-row"><span class="badge '+pClass(l.priority)+'">'+esc(l.priority)+'</span>'+(l.followUpDate?'<span class="badge" style="background:'+(due?"#fff0b3":"#ebecf0")+';color:'+(due?"#7a5d00":"#42526e")+'">פולואפ: '+fmtDate(l.followUpDate)+'</span>':"")+'</div>';
     if(l.employees>0||l.location)extra+='<div class="card-row">'+(l.employees>0?'<span class="card-label">עובדים:</span><span class="card-value">'+Number(l.employees).toLocaleString()+'</span>':"")+(l.location?'<span class="card-label" style="margin-right:8px">📍</span><span class="card-value">'+esc(l.location)+'</span>':"")+'</div>';
     if(l.contact)extra+='<div class="card-row"><span class="card-label">איש קשר:</span><span class="card-value">'+esc(l.contact)+(l.role?" — "+esc(l.role):"")+'</span></div>';
-    if(l.connection)extra+='<div class="card-row"><span class="card-label">חיבור:</span><span class="card-value">'+esc(l.connection)+'</span></div>';
+    if(l.nextAction)extra+='<div class="card-row"><span class="card-label">פעולה הבאה:</span><span class="card-value">'+esc(l.nextAction)+"</span></div>";if(l.connection)extra+='<div class="card-row"><span class="card-label">חיבור:</span><span class="card-value">'+esc(l.connection)+'</span></div>';
     if(l.phone)extra+='<div class="card-row"><span class="card-label">📞</span><a class="contact-link" href="tel:'+esc(safeTel(l.phone))+'" onclick="event.stopPropagation()">'+esc(l.phone)+'</a></div>';
     if(l.email)extra+='<div class="card-row"><span class="card-label">✉️</span><a class="contact-link" href="mailto:'+esc(l.email)+'" onclick="event.stopPropagation()">'+esc(l.email)+'</a></div>';
     if(l.supplier||l.monthlyConsumption||l.pricePerKg)extra+='<div class="card-row"><span class="card-label">עסקי:</span><span class="card-value">'+[l.supplier?("ספק: "+esc(l.supplier)):"",l.monthlyConsumption?("צריכה: "+esc(l.monthlyConsumption)):"",l.pricePerKg?("₪/ק״ג: "+esc(l.pricePerKg)):""].filter(Boolean).join(" • ")+'</span></div>';
@@ -350,7 +386,7 @@ function render(){
   }).join("");
 
   var syncLabel=lastSync?("עודכן "+lastSync.toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})):"מסונכרן";
-  var statLabel=statFilter?(statFilter==="__בטיפול"?"לידים בתהליך":(statFilter==="__פולואפ"?"פולואפ להיום":statFilter)):"";
+  var statLabel=statFilter?(statFilter==="__בטיפול"?"לידים בתהליך":(statFilter==="__היום"?"לטיפול היום":(statFilter==="__פולואפ"?"פולואפ להיום":statFilter))):"";
 
   document.getElementById("app").innerHTML=
     '<div class="header"><div><h1>☕ ניהול לידים</h1><p>סביבת עבודה בסגנון Jira • סנכרון ענן</p></div><div class="header-actions"><div class="sync-badge" id="sync-badge" style="color:#79f2c0">✅ '+syncLabel+'</div><button class="btn-tool" onclick="exportToExcel()">⬇️ ייצוא</button><button class="btn-tool" onclick="triggerImport()">⬆️ ייבוא</button><input id="excel-import-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromExcel(event)"><button class="btn-add" onclick="openAdd()">+ ליד</button></div></div>'
@@ -395,7 +431,7 @@ function setForm(l){
   populateSelects();
   var title=document.getElementById("modal-title-text");
   if(title) title.textContent=l.company||"ליד חדש";
-  ["company","employees","location","connection","contact","role","phone","email","owner","priority","status","followUpDate","hasContract","supplier","machineType","machineCount","monthlyConsumption","pricePerKg","notes","meetingDate","meetingTime","meetingLocation","meetingGuest"].forEach(function(k){
+  ["company","employees","location","connection","contact","role","phone","email","owner","priority","status","followUpDate","hasContract","supplier","machineType","machineCount","monthlyConsumption","pricePerKg","nextAction","notes","meetingDate","meetingTime","meetingLocation","meetingGuest"].forEach(function(k){
     var el=document.getElementById("f_"+k);
     if(el) el.value=l[k]||"";
   });
@@ -418,8 +454,8 @@ function openEdit(id){
   openModalUI();
 }
 function openAdd(){currentLead=normalizeLead({id:0,company:"",owner:"בועז",priority:"בינונית",status:"לא טופל",sheet:"ראשוני",lastUpdated:today(),meetingTime:"09:00",deleted:false});isAdding=true;setForm(currentLead);document.getElementById("modal-title-text").textContent="ליד חדש";var d=document.getElementById("btn-delete-lead");if(d)d.style.display="none";openModalUI();}
-function buildLeadFromForm(){return normalizeLead(Object.assign({},currentLead,{company:g("f_company").trim(),employees:Number(g("f_employees"))||0,location:g("f_location").trim(),connection:g("f_connection").trim(),contact:g("f_contact").trim(),role:g("f_role").trim(),phone:g("f_phone").trim(),email:g("f_email").trim(),owner:g("f_owner"),priority:g("f_priority")||"בינונית",status:g("f_status"),followUpDate:g("f_followUpDate"),hasContract:g("f_hasContract"),supplier:g("f_supplier").trim(),machineType:g("f_machineType").trim(),machineCount:g("f_machineCount"),monthlyConsumption:g("f_monthlyConsumption").trim(),pricePerKg:g("f_pricePerKg"),currentStatus:currentLead.currentStatus||"",notes:g("f_notes").trim(),lastUpdated:today(),meetingDate:g("f_meetingDate"),meetingTime:g("f_meetingTime")||"09:00",meetingLocation:g("f_meetingLocation").trim(),meetingGuest:g("f_meetingGuest").trim(),sheet:currentLead.sheet||"ראשוני"}));}
-function saveLead(){if(!currentLead){alert("שגיאה: לא נמצא ליד פעיל לשמירה");return;}var b=document.querySelector(".btn-save");if(b){b.disabled=true;b.textContent="שומר...";}var wasAdding=isAdding,updated=buildLeadFromForm();if(updated.status==="לפנייה עתידית"&&!updated.followUpDate){alert("נא להזין תאריך פנייה עתידית");if(b){b.disabled=false;b.textContent="💾 שמור";}return;}if(!updated.company){alert("נא להזין שם חברה");if(b){b.disabled=false;b.textContent="💾 שמור";}return;}var nl=wasAdding?leads.concat([Object.assign(updated,{id:Date.now()})]):leads.map(function(l){return String(l.id)===String(updated.id)?updated:l;});saveLeads(nl).then(function(){closeModal();render();}).catch(function(){closeModal();render();alert("הליד נשמר מקומית במכשיר, אבל לא הצליח להסתנכרן לענן.");});}
+function buildLeadFromForm(){return normalizeLead(Object.assign({},currentLead,{company:g("f_company").trim(),employees:Number(g("f_employees"))||0,location:g("f_location").trim(),connection:g("f_connection").trim(),contact:g("f_contact").trim(),role:g("f_role").trim(),phone:g("f_phone").trim(),email:g("f_email").trim(),owner:g("f_owner"),priority:g("f_priority")||"בינונית",status:g("f_status"),followUpDate:g("f_followUpDate"),hasContract:g("f_hasContract"),supplier:g("f_supplier").trim(),machineType:g("f_machineType").trim(),machineCount:g("f_machineCount"),monthlyConsumption:g("f_monthlyConsumption").trim(),pricePerKg:g("f_pricePerKg"),currentStatus:currentLead.currentStatus||"",nextAction:g("f_nextAction").trim(),notes:g("f_notes").trim(),lastUpdated:today(),meetingDate:g("f_meetingDate"),meetingTime:g("f_meetingTime")||"09:00",meetingLocation:g("f_meetingLocation").trim(),meetingGuest:g("f_meetingGuest").trim(),sheet:currentLead.sheet||"ראשוני"}));}
+function saveLead(){if(!currentLead){alert("שגיאה: לא נמצא ליד פעיל לשמירה");return;}var b=document.querySelector(".btn-save");if(b){b.disabled=true;b.textContent="שומר...";}var wasAdding=isAdding,updated=buildLeadFromForm();if(updated.status==="לפנייה עתידית"&&!updated.followUpDate){alert("נא להזין תאריך פנייה עתידית");if(b){b.disabled=false;b.textContent="💾 שמור";}return;}if(!updated.company){alert("נא להזין שם חברה");if(b){b.disabled=false;b.textContent="💾 שמור";}return;}var duplicate=findDuplicateLead(updated,updated.id);if(duplicate&&!confirm("נראה שכבר קיים ליד דומה: "+duplicate.company+"\nלהמשיך לשמור בכל זאת?")){if(b){b.disabled=false;b.textContent="💾 שמור";}return;}var nl=wasAdding?leads.concat([Object.assign(updated,{id:Date.now()})]):leads.map(function(l){return String(l.id)===String(updated.id)?updated:l;});saveLeads(nl).then(function(){closeModal();render();}).catch(function(){closeModal();render();alert("הליד נשמר מקומית במכשיר, אבל לא הצליח להסתנכרן לענן.");});}
 function deleteLead(){if(!currentLead||isAdding)return;if(!confirm("למחוק את "+(currentLead.company||"הליד")+" מהרשימה?\nהליד יעבור לכרטיסיית נמחקו ולא יימחק לצמיתות."))return;var id=currentLead.id,nl=leads.map(function(l){return String(l.id)===String(id)?Object.assign({},l,{deleted:true,deletedAt:new Date().toISOString(),lastUpdated:today()}):l;});saveLeads(nl).then(function(){closeModal();activeTab="נמחקו";render();}).catch(function(){closeModal();activeTab="נמחקו";render();alert("הליד נמחק מקומית, אבל לא הצליח להסתנכרן לענן.");});}
 function updateStatus(id,status){
   var sid=String(id);
@@ -440,12 +476,12 @@ function buildGCalLink(){var company=g("f_company"),date=g("f_meetingDate"),time
 function openGCal(){var link=buildGCalLink();if(!link){alert("נא להזין תאריך לפגישה");return;}window.open(link,"_blank");}
 function buildICS(){var company=g("f_company")||"פגישה",date=g("f_meetingDate"),time=g("f_meetingTime")||"09:00",loc=g("f_meetingLocation"),guest=g("f_meetingGuest");if(!date){alert("נא להזין תאריך לפגישה");return;}var p=date.split("-"),tp=time.split(":"),pad=function(n){return String(n).padStart(2,"0");},start=p[0]+p[1]+p[2]+"T"+pad(tp[0])+pad(tp[1]||"00")+"00",endH=String((parseInt(tp[0],10)+1)%24).padStart(2,"0"),end=p[0]+p[1]+p[2]+"T"+endH+pad(tp[1]||"00")+"00",att=guest?"ATTENDEE;RSVP=TRUE:mailto:"+guest+"\n":"",ics="BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nUID:"+Date.now()+"@leads\nSUMMARY:פגישה — "+company+"\nDTSTART:"+start+"\nDTEND:"+end+"\nLOCATION:"+loc+"\n"+att+"END:VEVENT\nEND:VCALENDAR",blob=new Blob([ics],{type:"text/calendar"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="פגישה-"+company+".ics";a.click();}
 function safeExcelValue(v){return v===undefined||v===null?"":String(v);}
-function exportToExcel(){var data=leads.filter(function(l){return!l.deleted;}).map(function(l){l=normalizeLead(l);return{"שם חברה":safeExcelValue(l.company),"כמות עובדים":l.employees||"","מיקום":safeExcelValue(l.location),"חיבור":safeExcelValue(l.connection),"איש קשר":safeExcelValue(l.contact),"תפקיד":safeExcelValue(l.role),"טלפון":safeExcelValue(l.phone),"מייל":safeExcelValue(l.email),"אחראי":safeExcelValue(l.owner),"רמת עדיפות":safeExcelValue(l.priority),"תאריך פולואפ":safeExcelValue(l.followUpDate),"מצב קיים":safeExcelValue(l.currentStatus),"סטטוס":safeExcelValue(l.status),"הערות":safeExcelValue(l.notes),"האם בחוזה קיים":safeExcelValue(l.hasContract),"ספק":safeExcelValue(l.supplier),"סוג מכונות":safeExcelValue(l.machineType),"כמות מכונות":safeExcelValue(l.machineCount),"צריכה חודשית קיימת/משוערת":safeExcelValue(l.monthlyConsumption),"מחיר לקילו":safeExcelValue(l.pricePerKg),"תאריך עדכון":safeExcelValue(l.lastUpdated),"כרטיסייה":safeExcelValue(l.sheet),"תאריך פגישה":safeExcelValue(l.meetingDate),"שעת פגישה":safeExcelValue(l.meetingTime),"מיקום פגישה":safeExcelValue(l.meetingLocation),"מייל לזימון":safeExcelValue(l.meetingGuest)};});if(!data.length){alert("אין לידים לייצוא");return;}if(!window.XLSX){alert("רכיב הייצוא לא נטען. בדוק חיבור אינטרנט.");return;}var ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Leads");XLSX.writeFile(wb,"mister-bean-leads-"+today()+".xlsx");}
+function exportToExcel(){var data=leads.filter(function(l){return!l.deleted;}).map(function(l){l=normalizeLead(l);return{"שם חברה":safeExcelValue(l.company),"כמות עובדים":l.employees||"","מיקום":safeExcelValue(l.location),"חיבור":safeExcelValue(l.connection),"איש קשר":safeExcelValue(l.contact),"תפקיד":safeExcelValue(l.role),"טלפון":safeExcelValue(l.phone),"מייל":safeExcelValue(l.email),"אחראי":safeExcelValue(l.owner),"רמת עדיפות":safeExcelValue(l.priority),"תאריך פולואפ":safeExcelValue(l.followUpDate),"מצב קיים":safeExcelValue(l.currentStatus),"סטטוס":safeExcelValue(l.status),"פעולה הבאה":safeExcelValue(l.nextAction),"הערות":safeExcelValue(l.notes),"האם בחוזה קיים":safeExcelValue(l.hasContract),"ספק":safeExcelValue(l.supplier),"סוג מכונות":safeExcelValue(l.machineType),"כמות מכונות":safeExcelValue(l.machineCount),"צריכה חודשית קיימת/משוערת":safeExcelValue(l.monthlyConsumption),"מחיר לקילו":safeExcelValue(l.pricePerKg),"תאריך עדכון":safeExcelValue(l.lastUpdated),"כרטיסייה":safeExcelValue(l.sheet),"תאריך פגישה":safeExcelValue(l.meetingDate),"שעת פגישה":safeExcelValue(l.meetingTime),"מיקום פגישה":safeExcelValue(l.meetingLocation),"מייל לזימון":safeExcelValue(l.meetingGuest)};});if(!data.length){alert("אין לידים לייצוא");return;}if(!window.XLSX){alert("רכיב הייצוא לא נטען. בדוק חיבור אינטרנט.");return;}var ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Leads");XLSX.writeFile(wb,"mister-bean-leads-"+today()+".xlsx");}
 function triggerImport(){var input=document.getElementById("excel-import-input");if(input){input.value="";input.click();}}
 function pick(row,names){for(var i=0;i<names.length;i++){if(row[names[i]]!==undefined&&row[names[i]]!==null&&String(row[names[i]]).trim()!=="")return String(row[names[i]]).trim();}return"";}
 function excelDateToISO(v){if(!v)return"";if(typeof v==="number"&&window.XLSX&&XLSX.SSF){var d=XLSX.SSF.parse_date_code(v);if(d)return String(d.y).padStart(4,"0")+"-"+String(d.m).padStart(2,"0")+"-"+String(d.d).padStart(2,"0");}var s=String(v).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){var p=s.split("/");return p[2]+"-"+p[1].padStart(2,"0")+"-"+p[0].padStart(2,"0");}return s;}
-function rowToLead(row){return normalizeLead({id:Date.now()+Math.floor(Math.random()*1000000),company:pick(row,["שם חברה","חברה","company","Company","שם עסק"]),employees:Number(pick(row,["כמות עובדים","עובדים","employees","Employees"]))||0,location:pick(row,["מיקום","location","Location","כתובת"]),connection:pick(row,["חיבור","מקור","connection","Connection","source","Source"]),contact:pick(row,["איש קשר","contact","Contact","שם איש קשר"]),role:pick(row,["תפקיד","role","Role"]),phone:pick(row,["טלפון","מספר טלפון","phone","Phone","mobile","Mobile"]),email:pick(row,["מייל","אימייל","email","Email","e-mail","E-mail"]),owner:pick(row,["אחראי","owner","Owner"])||"בועז",priority:pick(row,["רמת עדיפות","עדיפות","priority","Priority"])||"בינונית",followUpDate:excelDateToISO(pick(row,["תאריך פולואפ","פולואפ","followUpDate","Follow Up Date"])),currentStatus:pick(row,["מצב קיים","currentStatus","Current Status"]),status:pick(row,["סטטוס","status","Status"])||"לא טופל",notes:pick(row,["הערות","notes","Notes"]),hasContract:pick(row,["האם בחוזה קיים","האם נמצאים בחוזה קיים","hasContract","Has Contract"]),supplier:pick(row,["ספק","supplier","Supplier"]),machineType:pick(row,["סוג מכונות","machineType","Machine Type"]),machineCount:pick(row,["כמות מכונות","machineCount","Machine Count"]),monthlyConsumption:pick(row,["צריכה חודשית קיימת/משוערת","צריכה חודשית","monthlyConsumption","Monthly Consumption"]),pricePerKg:pick(row,["מחיר לקילו","pricePerKg","Price Per Kg"]),sheet:pick(row,["כרטיסייה","sheet","Sheet"])||"ראשוני",lastUpdated:excelDateToISO(pick(row,["תאריך עדכון","lastUpdated","Last Updated"]))||today(),meetingDate:excelDateToISO(pick(row,["תאריך פגישה","meetingDate","Meeting Date"])),meetingTime:pick(row,["שעת פגישה","שעה","meetingTime","Meeting Time"]),meetingLocation:pick(row,["מיקום פגישה","meetingLocation","Meeting Location"]),meetingGuest:pick(row,["מייל לזימון","meetingGuest","Meeting Guest"]),deleted:false});}
-function importFromExcel(event){var file=event.target.files&&event.target.files[0];if(!file)return;if(!window.XLSX){alert("רכיב הייבוא לא נטען. בדוק חיבור אינטרנט.");return;}var reader=new FileReader();reader.onload=function(e){try{var data=new Uint8Array(e.target.result),wb=XLSX.read(data,{type:"array"}),ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{defval:""}),imported=rows.map(rowToLead).filter(function(l){return l.company;});if(!imported.length){alert("לא נמצאו שורות עם שם חברה בקובץ.");return;}var replace=confirm("נמצאו "+imported.length+" לידים בקובץ.\n\nאישור = להחליף את כל הרשימה הקיימת.\nביטול = להוסיף לרשימה הקיימת.");var nl=replace?imported:leads.concat(imported);saveLeads(nl).then(function(){render();alert("הייבוא הסתיים בהצלחה.");}).catch(function(){render();alert("הייבוא נשמר מקומית, אבל לא הסתנכרן לענן.");});}catch(err){alert("שגיאה בייבוא הקובץ. ודא שזה קובץ Excel או CSV תקין.");}};reader.readAsArrayBuffer(file);}
+function rowToLead(row){return normalizeLead({id:Date.now()+Math.floor(Math.random()*1000000),company:pick(row,["שם חברה","חברה","company","Company","שם עסק"]),employees:Number(pick(row,["כמות עובדים","עובדים","employees","Employees"]))||0,location:pick(row,["מיקום","location","Location","כתובת"]),connection:pick(row,["חיבור","מקור","connection","Connection","source","Source"]),contact:pick(row,["איש קשר","contact","Contact","שם איש קשר"]),role:pick(row,["תפקיד","role","Role"]),phone:pick(row,["טלפון","מספר טלפון","phone","Phone","mobile","Mobile"]),email:pick(row,["מייל","אימייל","email","Email","e-mail","E-mail"]),owner:pick(row,["אחראי","owner","Owner"])||"בועז",priority:pick(row,["רמת עדיפות","עדיפות","priority","Priority"])||"בינונית",followUpDate:excelDateToISO(pick(row,["תאריך פולואפ","פולואפ","followUpDate","Follow Up Date"])),currentStatus:pick(row,["מצב קיים","currentStatus","Current Status"]),status:pick(row,["סטטוס","status","Status"])||"לא טופל",nextAction:pick(row,["פעולה הבאה","nextAction","Next Action"]),notes:pick(row,["הערות","notes","Notes"]),hasContract:pick(row,["האם בחוזה קיים","האם נמצאים בחוזה קיים","hasContract","Has Contract"]),supplier:pick(row,["ספק","supplier","Supplier"]),machineType:pick(row,["סוג מכונות","machineType","Machine Type"]),machineCount:pick(row,["כמות מכונות","machineCount","Machine Count"]),monthlyConsumption:pick(row,["צריכה חודשית קיימת/משוערת","צריכה חודשית","monthlyConsumption","Monthly Consumption"]),pricePerKg:pick(row,["מחיר לקילו","pricePerKg","Price Per Kg"]),sheet:pick(row,["כרטיסייה","sheet","Sheet"])||"ראשוני",lastUpdated:excelDateToISO(pick(row,["תאריך עדכון","lastUpdated","Last Updated"]))||today(),meetingDate:excelDateToISO(pick(row,["תאריך פגישה","meetingDate","Meeting Date"])),meetingTime:pick(row,["שעת פגישה","שעה","meetingTime","Meeting Time"]),meetingLocation:pick(row,["מיקום פגישה","meetingLocation","Meeting Location"]),meetingGuest:pick(row,["מייל לזימון","meetingGuest","Meeting Guest"]),deleted:false});}
+function importFromExcel(event){var file=event.target.files&&event.target.files[0];if(!file)return;if(!window.XLSX){alert("רכיב הייבוא לא נטען. בדוק חיבור אינטרנט.");return;}var reader=new FileReader();reader.onload=function(e){try{var data=new Uint8Array(e.target.result),wb=XLSX.read(data,{type:"array"}),ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{defval:""}),imported=rows.map(rowToLead).filter(function(l){return l.company;});if(!imported.length){alert("לא נמצאו שורות עם שם חברה בקובץ.");return;}var replace=confirm("נמצאו "+imported.length+" לידים בקובץ.\n\nאישור = להחליף את כל הרשימה הקיימת.\nביטול = להוסיף לרשימה הקיימת.");var skippedDuplicates=0;var finalImported=imported;if(!replace){finalImported=imported.filter(function(l){if(findDuplicateLead(l,null)){skippedDuplicates++;return false;}return true;});}var nl=replace?imported:leads.concat(finalImported);saveLeads(nl).then(function(){render();alert("הייבוא הסתיים בהצלחה."+ (skippedDuplicates? "\nדולגו "+skippedDuplicates+" לידים כפולים.":""));}).catch(function(){render();alert("הייבוא נשמר מקומית, אבל לא הסתנכרן לענן.");});}catch(err){alert("שגיאה בייבוא הקובץ. ודא שזה קובץ Excel או CSV תקין.");}};reader.readAsArrayBuffer(file);}
 
 document.addEventListener("click",function(e){
   var tab=e.target.closest("[data-tab]");
