@@ -44,6 +44,14 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
 @media (min-width:760px){.modal-box{top:50%;bottom:auto;left:50%;right:auto;transform:translate(-50%,-40%);width:min(780px,92vw);max-height:90vh;border-radius:10px;opacity:0;transition:opacity .2s,transform .2s}#modal-wrap.open .modal-box{transform:translate(-50%,-50%);opacity:1}.modal-handle{display:none}}
 @media (max-width:900px){.stats{grid-template-columns:repeat(3,minmax(100px,1fr))}}
 @media (max-width:760px){.table-wrap{display:none}.cards{display:flex}.header{align-items:flex-start;padding:12px 10px}.header h1{font-size:15px}.header-actions{gap:6px}.sync-badge{display:none}.btn-tool{padding:8px 9px;font-size:12px}.btn-add{padding:8px 12px;font-size:13px}.stats{grid-template-columns:repeat(2,minmax(100px,1fr));padding-left:10px;padding-right:10px;gap:8px}.stat-value{font-size:19px}.modal-grid,.meeting-grid{grid-template-columns:1fr}.modal-box{max-height:88dvh;padding-bottom:max(28px,env(safe-area-inset-bottom))}.field input,.field select,.field textarea{font-size:16px}}
+
+/* Stable search field */
+#search-box {
+  min-height: 38px;
+  line-height: 20px;
+  flex: 1 1 240px;
+}
+
 </style>
 </head>
 <body>
@@ -79,10 +87,8 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
       <div class="field"><label>מחיר לקילו</label><input id="f_pricePerKg" type="number" inputmode="decimal" step="0.01"></div>
     </div>
 
-    <div class="section-title">מעקב</div>
-    <div class="field"><label>מצב קיים</label><input id="f_currentStatus" type="text" autocomplete="off"></div>
     <div class="field"><label>הערות</label><textarea id="f_notes" rows="3"></textarea></div>
-    <div class="field"><label>תאריך עדכון</label><input type="date" id="f_lastUpdated"></div>
+    <div class="field"><label>תאריך עדכון אחרון</label><input type="text" id="f_lastUpdatedDisplay" readonly style="background:#f4f5f7;color:#5e6c84"></div>
 
     <div id="meeting-section" class="meeting-box" style="display:none">
       <div class="meeting-box-title">📅 פרטי פגישה</div>
@@ -117,7 +123,7 @@ var STATUS_OPTIONS=[
 var OLD_STATUS_MAP={"ממתין לחיבור":"בהמתנה לפרטים","נשלחה הצעה":"נשלחה הצעת מחיר","מנוהל":"בוצעה שיחה ראשונית"};
 var PRIORITY_OPTIONS=["נמוכה","בינונית","גבוהה"];
 var OWNERS=["בועז","בר","בועז/בר","אחר"];
-var leads=[],activeTab="כל הלידים",filterStatus="הכל",filterOwner="הכל",search="",sortKey="followUpDate",sortDir="asc",syncStatus="idle",lastSync=null,currentLead=null,isAdding=false,statFilter=null,keepSearchFocus=false,keepSearchSelectionStart=0,keepSearchSelectionEnd=0;
+var leads=[],activeTab="כל הלידים",filterStatus="הכל",filterOwner="הכל",search="",sortKey="followUpDate",sortDir="asc",syncStatus="idle",lastSync=null,currentLead=null,isAdding=false,statFilter=null,searchTimer=null,keepSearchFocus=false,keepSearchSelectionStart=0,keepSearchSelectionEnd=0,keepWindowScrollY=0;
 
 function fbRead(){return fetch(DB_URL+"?t="+Date.now()).then(function(r){if(!r.ok)throw new Error("read failed");return r.json();});}
 function fbWrite(d){return fetch(DB_URL,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)}).then(function(r){if(!r.ok)throw new Error("write failed");return true;});}
@@ -146,8 +152,33 @@ function init(){
 function sOpt(s){return STATUS_OPTIONS.filter(function(x){return x.label===s;})[0]||STATUS_OPTIONS[0];}
 function ownerStyle(o){if(o==="בועז")return"background:#deebff;color:#0747a6";if(o==="בר")return"background:#e3fcef;color:#006644";return"background:#fff0b3;color:#7a5d00";}
 function pClass(p){if(p==="גבוהה")return"priority-high";if(p==="נמוכה")return"priority-low";return"priority-medium";}
-function preserveSearchFocusBeforeRender(){var a=document.activeElement;if(a&&a.id==="search-box"){keepSearchFocus=true;try{keepSearchSelectionStart=a.selectionStart||String(a.value||"").length;keepSearchSelectionEnd=a.selectionEnd||keepSearchSelectionStart;}catch(e){keepSearchSelectionStart=String(a.value||"").length;keepSearchSelectionEnd=keepSearchSelectionStart;}}}
-function restoreSearchFocusAfterRender(){if(!keepSearchFocus)return;var input=document.getElementById("search-box");if(!input){keepSearchFocus=false;return;}input.focus({preventScroll:true});try{var len=String(input.value||"").length;input.setSelectionRange(Math.min(keepSearchSelectionStart,len),Math.min(keepSearchSelectionEnd,len));}catch(e){}keepSearchFocus=false;}
+function preserveSearchFocusBeforeRender(){
+  var a=document.activeElement;
+  keepWindowScrollY=window.scrollY||window.pageYOffset||0;
+  if(a&&a.id==="search-box"){
+    keepSearchFocus=true;
+    try{
+      keepSearchSelectionStart=a.selectionStart||String(a.value||"").length;
+      keepSearchSelectionEnd=a.selectionEnd||keepSearchSelectionStart;
+    }catch(e){
+      keepSearchSelectionStart=String(a.value||"").length;
+      keepSearchSelectionEnd=keepSearchSelectionStart;
+    }
+  }
+}
+function restoreSearchFocusAfterRender(){
+  if(!keepSearchFocus)return;
+  var input=document.getElementById("search-box");
+  if(!input){keepSearchFocus=false;return;}
+  var y=keepWindowScrollY||0;
+  try{input.focus({preventScroll:true});}catch(e){input.focus();}
+  try{
+    var len=String(input.value||"").length;
+    input.setSelectionRange(Math.min(keepSearchSelectionStart,len),Math.min(keepSearchSelectionEnd,len));
+  }catch(e){}
+  try{window.scrollTo(0,y);}catch(e){}
+  keepSearchFocus=false;
+}
 function getFiltered(){
   return leads.filter(function(l){l=normalizeLead(l);
     if(activeTab==="נמחקו"&&!l.deleted)return false;if(activeTab!=="נמחקו"&&l.deleted)return false;
@@ -181,16 +212,38 @@ function render(){
   document.getElementById("app").innerHTML='<div class="header"><div><h1>☕ ניהול לידים</h1><p>סביבת עבודה בסגנון Jira • סנכרון ענן</p></div><div class="header-actions"><div class="sync-badge" id="sync-badge" style="color:#79f2c0">✅ '+syncLabel+'</div><button class="btn-tool" onclick="exportToExcel()">⬇️ ייצוא</button><button class="btn-tool" onclick="triggerImport()">⬆️ ייבוא</button><input id="excel-import-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromExcel(event)"><button class="btn-add" onclick="openAdd()">+ ליד</button></div></div><div class="stats">'+statsHTML+'</div><div class="tabs">'+tabsHTML+'</div><div class="filters"><input id="search-box" placeholder="🔍 חיפוש..." value="'+esc(search)+'" oninput="setSearch(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><select onchange="setFilterStatus(this.value)"><option'+(filterStatus==="הכל"?" selected":"")+'>הכל</option>'+STATUS_OPTIONS.map(function(s){return'<option'+(filterStatus===s.label?" selected":"")+">"+s.label+"</option>";}).join("")+'</select><select onchange="setFilterOwner(this.value)"><option'+(filterOwner==="הכל"?" selected":"")+'>הכל</option>'+OWNERS.map(function(o){return'<option'+(filterOwner===o?" selected":"")+">"+o+"</option>";}).join("")+'</select><span class="count">'+filtered.length+" לידים"+(statLabel?" • "+statLabel:"")+'</span></div><div class="table-wrap"><table><thead><tr>'+thHTML+"</tr></thead><tbody>"+rowsHTML+'</tbody></table></div><div class="cards">'+cardsHTML+"</div>";
   updateBadge();restoreSearchFocusAfterRender();
 }
-function setTab(t){activeTab=t;statFilter=null;render();}function setFilterStatus(v){filterStatus=v;render();}function setFilterOwner(v){filterOwner=v;render();}function setSort(k){if(sortKey===k)sortDir=sortDir==="asc"?"desc":"asc";else{sortKey=k;sortDir="asc";}render();}function toggleStatFilter(f){statFilter=(statFilter===f)?null:f;if(f)activeTab="כל הלידים";render();}function setSearch(v){search=v;keepSearchFocus=true;var a=document.activeElement;if(a&&a.id==="search-box"){try{keepSearchSelectionStart=a.selectionStart||String(v||"").length;keepSearchSelectionEnd=a.selectionEnd||keepSearchSelectionStart;}catch(e){keepSearchSelectionStart=String(v||"").length;keepSearchSelectionEnd=keepSearchSelectionStart;}}render();}
+function setTab(t){activeTab=t;statFilter=null;render();}function setFilterStatus(v){filterStatus=v;render();}function setFilterOwner(v){filterOwner=v;render();}function setSort(k){if(sortKey===k)sortDir=sortDir==="asc"?"desc":"asc";else{sortKey=k;sortDir="asc";}render();}function toggleStatFilter(f){statFilter=(statFilter===f)?null:f;if(f)activeTab="כל הלידים";render();}function setSearch(v){
+  search=v;
+  keepSearchFocus=true;
+
+  var a=document.activeElement;
+  if(a&&a.id==="search-box"){
+    try{
+      keepSearchSelectionStart=a.selectionStart||String(v||"").length;
+      keepSearchSelectionEnd=a.selectionEnd||keepSearchSelectionStart;
+    }catch(e){
+      keepSearchSelectionStart=String(v||"").length;
+      keepSearchSelectionEnd=keepSearchSelectionStart;
+    }
+  }else{
+    keepSearchSelectionStart=String(v||"").length;
+    keepSearchSelectionEnd=keepSearchSelectionStart;
+  }
+
+  if(searchTimer)clearTimeout(searchTimer);
+  searchTimer=setTimeout(function(){
+    render();
+  },450);
+}
 function populateSelects(){var os=document.getElementById("f_owner"),ss=document.getElementById("f_status"),ps=document.getElementById("f_priority");if(os)os.innerHTML=OWNERS.map(function(o){return"<option>"+o+"</option>";}).join("");if(ss)ss.innerHTML=STATUS_OPTIONS.map(function(s){return"<option>"+s.label+"</option>";}).join("");if(ps)ps.innerHTML=PRIORITY_OPTIONS.map(function(p){return"<option>"+p+"</option>";}).join("");}
 function updateMeetingSection(){var s=document.getElementById("f_status"),sec=document.getElementById("meeting-section");if(!s||!sec)return;sec.style.display=s.value==="נקבעה פגישה"?"block":"none";}
 function g(id){return(document.getElementById(id)||{}).value||"";}
 function openModalUI(){var w=document.getElementById("modal-wrap");if(!w)return;w.classList.add("open");document.body.classList.add("modal-open");document.body.style.overflow="hidden";}
 function closeModal(){var w=document.getElementById("modal-wrap");if(w)w.classList.remove("open");document.body.classList.remove("modal-open");document.body.style.overflow="";currentLead=null;isAdding=false;var b=document.querySelector(".btn-save");if(b){b.disabled=false;b.textContent="💾 שמור";}}
-function setForm(l){populateSelects();document.getElementById("modal-title-text").textContent=l.company||"ליד חדש";["company","employees","location","connection","contact","role","phone","email","owner","priority","status","followUpDate","hasContract","supplier","machineType","machineCount","monthlyConsumption","pricePerKg","currentStatus","notes","lastUpdated","meetingDate","meetingTime","meetingLocation","meetingGuest"].forEach(function(k){var el=document.getElementById("f_"+k);if(el)el.value=l[k]||"";});document.getElementById("f_owner").value=l.owner||"בועז";document.getElementById("f_priority").value=l.priority||"בינונית";document.getElementById("f_status").value=l.status||"לא טופל";document.getElementById("f_lastUpdated").value=l.lastUpdated||today();document.getElementById("f_meetingTime").value=l.meetingTime||"09:00";updateMeetingSection();}
+function setForm(l){populateSelects();document.getElementById("modal-title-text").textContent=l.company||"ליד חדש";["company","employees","location","connection","contact","role","phone","email","owner","priority","status","followUpDate","hasContract","supplier","machineType","machineCount","monthlyConsumption","pricePerKg","notes","meetingDate","meetingTime","meetingLocation","meetingGuest"].forEach(function(k){var el=document.getElementById("f_"+k);if(el)el.value=l[k]||"";});document.getElementById("f_owner").value=l.owner||"בועז";document.getElementById("f_priority").value=l.priority||"בינונית";document.getElementById("f_status").value=l.status||"לא טופל";document.getElementById("f_lastUpdated").value=l.lastUpdated||today();document.getElementById("f_meetingTime").value=l.meetingTime||"09:00";var upd=document.getElementById("f_lastUpdatedDisplay");if(upd)upd.value=fmtDate(l.lastUpdated||today());updateMeetingSection();}
 function openEdit(id){var l=leads.find(function(x){return x.id===id;});if(!l)return;currentLead=Object.assign({},normalizeLead(l));isAdding=false;setForm(currentLead);var d=document.getElementById("btn-delete-lead");if(d)d.style.display="block";openModalUI();}
 function openAdd(){currentLead=normalizeLead({id:0,company:"",owner:"בועז",priority:"בינונית",status:"לא טופל",sheet:"ראשוני",lastUpdated:today(),meetingTime:"09:00",deleted:false});isAdding=true;setForm(currentLead);document.getElementById("modal-title-text").textContent="ליד חדש";var d=document.getElementById("btn-delete-lead");if(d)d.style.display="none";openModalUI();}
-function buildLeadFromForm(){return normalizeLead(Object.assign({},currentLead,{company:g("f_company").trim(),employees:Number(g("f_employees"))||0,location:g("f_location").trim(),connection:g("f_connection").trim(),contact:g("f_contact").trim(),role:g("f_role").trim(),phone:g("f_phone").trim(),email:g("f_email").trim(),owner:g("f_owner"),priority:g("f_priority")||"בינונית",status:g("f_status"),followUpDate:g("f_followUpDate"),hasContract:g("f_hasContract"),supplier:g("f_supplier").trim(),machineType:g("f_machineType").trim(),machineCount:g("f_machineCount"),monthlyConsumption:g("f_monthlyConsumption").trim(),pricePerKg:g("f_pricePerKg"),currentStatus:g("f_currentStatus").trim(),notes:g("f_notes").trim(),lastUpdated:g("f_lastUpdated")||today(),meetingDate:g("f_meetingDate"),meetingTime:g("f_meetingTime")||"09:00",meetingLocation:g("f_meetingLocation").trim(),meetingGuest:g("f_meetingGuest").trim(),sheet:currentLead.sheet||"ראשוני"}));}
+function buildLeadFromForm(){return normalizeLead(Object.assign({},currentLead,{company:g("f_company").trim(),employees:Number(g("f_employees"))||0,location:g("f_location").trim(),connection:g("f_connection").trim(),contact:g("f_contact").trim(),role:g("f_role").trim(),phone:g("f_phone").trim(),email:g("f_email").trim(),owner:g("f_owner"),priority:g("f_priority")||"בינונית",status:g("f_status"),followUpDate:g("f_followUpDate"),hasContract:g("f_hasContract"),supplier:g("f_supplier").trim(),machineType:g("f_machineType").trim(),machineCount:g("f_machineCount"),monthlyConsumption:g("f_monthlyConsumption").trim(),pricePerKg:g("f_pricePerKg"),currentStatus:currentLead.currentStatus||"",notes:g("f_notes").trim(),lastUpdated:today(),meetingDate:g("f_meetingDate"),meetingTime:g("f_meetingTime")||"09:00",meetingLocation:g("f_meetingLocation").trim(),meetingGuest:g("f_meetingGuest").trim(),sheet:currentLead.sheet||"ראשוני"}));}
 function saveLead(){if(!currentLead){alert("שגיאה: לא נמצא ליד פעיל לשמירה");return;}var b=document.querySelector(".btn-save");if(b){b.disabled=true;b.textContent="שומר...";}var wasAdding=isAdding,updated=buildLeadFromForm();if(!updated.company){alert("נא להזין שם חברה");if(b){b.disabled=false;b.textContent="💾 שמור";}return;}var nl=wasAdding?leads.concat([Object.assign(updated,{id:Date.now()})]):leads.map(function(l){return l.id===updated.id?updated:l;});saveLeads(nl).then(function(){closeModal();render();}).catch(function(){closeModal();render();alert("הליד נשמר מקומית במכשיר, אבל לא הצליח להסתנכרן לענן.");});}
 function deleteLead(){if(!currentLead||isAdding)return;if(!confirm("למחוק את "+(currentLead.company||"הליד")+" מהרשימה?\nהליד יעבור לכרטיסיית נמחקו ולא יימחק לצמיתות."))return;var id=currentLead.id,nl=leads.map(function(l){return l.id===id?Object.assign({},l,{deleted:true,deletedAt:new Date().toISOString(),lastUpdated:today()}):l;});saveLeads(nl).then(function(){closeModal();activeTab="נמחקו";render();}).catch(function(){closeModal();activeTab="נמחקו";render();alert("הליד נמחק מקומית, אבל לא הצליח להסתנכרן לענן.");});}
 function updateStatus(id,status){var nl=leads.map(function(l){return l.id===id?Object.assign({},l,{status:status,lastUpdated:today()}):l;});leads=normalizeLeadsList(nl);saveLocalBackup(leads);render();saveLeads(leads).catch(function(){alert("השינוי נשמר מקומית, אבל לא הסתנכרן לענן.");});}
