@@ -177,9 +177,36 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
   }
 }
 
+
+/* Auth screen */
+.auth-screen{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;background:#f4f5f7;direction:rtl}
+.auth-card{width:min(420px,100%);background:#fff;border:1px solid #dfe1e6;border-radius:14px;padding:24px;box-shadow:0 8px 24px rgba(9,30,66,.12)}
+.auth-title{font-size:24px;font-weight:900;color:#172b4d;margin-bottom:4px}
+.auth-subtitle{font-size:13px;color:#6b778c;margin-bottom:18px}
+.auth-field{margin-bottom:12px}.auth-field label{display:block;font-size:12px;color:#5e6c84;font-weight:900;margin-bottom:6px}
+.auth-field input{width:100%;border:2px solid #dfe1e6;border-radius:8px;padding:12px;font-size:16px;direction:ltr;text-align:left;outline:none}
+.auth-field input:focus{border-color:#4c9aff}
+.auth-btn{width:100%;border:none;background:#0052cc;color:#fff;border-radius:8px;padding:13px;font-size:15px;font-weight:900;cursor:pointer;font-family:inherit}
+.auth-error{color:#de350b;font-size:12px;margin-top:10px;min-height:18px;font-weight:800}
+.user-badge{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:6px 9px;font-size:11px;font-weight:800;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn-logout{border:none;border-radius:6px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer;font-family:inherit;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.2)}
+@media(max-width:760px){.user-badge{display:none}.btn-logout{padding:7px 8px;font-size:11px}}
+
 </style>
 </head>
 <body>
+
+<div id="auth-screen" class="auth-screen" style="display:none">
+  <div class="auth-card">
+    <div class="auth-title">כניסה למערכת</div>
+    <div class="auth-subtitle">התחברות מורשית למערכת ניהול הלידים של Mister Bean</div>
+    <div class="auth-field"><label>מייל</label><input id="auth-email" type="email" autocomplete="email" placeholder="you@example.com"></div>
+    <div class="auth-field"><label>סיסמה</label><input id="auth-password" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+    <button class="auth-btn" onclick="loginUser()">התחבר</button>
+    <div id="auth-error" class="auth-error"></div>
+  </div>
+</div>
+
 <div id="modal-wrap">
   <div class="modal-bg" onclick="closeModal()"></div>
   <div class="modal-box">
@@ -242,7 +269,23 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
 <div id="app"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script>
+var firebaseConfig={
+  apiKey:"AIzaSyC0X0AUzZre1XzD5InW6ljUFHRsd6883H8",
+  authDomain:"mister-bean.firebaseapp.com",
+  databaseURL:"https://mister-bean-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"mister-bean",
+  storageBucket:"mister-bean.firebasestorage.app",
+  messagingSenderId:"361606591654",
+  appId:"1:361606591654:web:5c38de493432c8acd0b067",
+  measurementId:"G-BTZTJW7EXF"
+};
+if(typeof firebase!=="undefined"&&!firebase.apps.length){firebase.initializeApp(firebaseConfig);}
+var auth=(typeof firebase!=="undefined"&&firebase.auth)?firebase.auth():null;
+var currentUser=null;
+var initStarted=false;
 var DB_URL="https://mister-bean-default-rtdb.europe-west1.firebasedatabase.app/leads.json";
 var STATUS_OPTIONS=[
   {label:"לא טופל",color:"#6b778c",bg:"#ebecf0"},
@@ -262,8 +305,52 @@ var OWNERS=["בועז","בר","בועז/בר","אחר"];
 var TASK_STATUS_OPTIONS=["פתוחה","בטיפול","נדחתה","בוצעה","בוטלה"];
 var leads=[],activeTab="לידים בתהליך",filterStatus="הכל",filterOwner="הכל",search="",sortKey="followUpDate",sortDir="asc",syncStatus="idle",lastSync=null,currentLead=null,isAdding=false,statFilter=null,searchTimer=null,keepSearchFocus=false,keepSearchSelectionStart=0,keepSearchSelectionEnd=0,keepWindowScrollY=0,taskOwnerFilter="הכל",taskStatusQuickFilter="הכל",customTabOrder=null;
 
-function fbRead(){return fetch(DB_URL+"?t="+Date.now()).then(function(r){if(!r.ok)throw new Error("read failed");return r.json();});}
-function fbWrite(d){return fetch(DB_URL,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)}).then(function(r){if(!r.ok)throw new Error("write failed");return true;});}
+function getAuthToken(){
+  if(!auth||!auth.currentUser)return Promise.reject(new Error("not authenticated"));
+  return auth.currentUser.getIdToken(false);
+}
+function urlWithAuth(token){return DB_URL+"?auth="+encodeURIComponent(token);}
+function fbRead(){
+  return getAuthToken().then(function(token){
+    return fetch(urlWithAuth(token)+"&t="+Date.now()).then(function(r){
+      if(!r.ok)throw new Error("read failed");
+      return r.json();
+    });
+  });
+}
+function fbWrite(d){
+  return getAuthToken().then(function(token){
+    return fetch(urlWithAuth(token),{
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(d)
+    }).then(function(r){
+      if(!r.ok)throw new Error("write failed");
+      return true;
+    });
+  });
+}
+function loginUser(){
+  var email=(document.getElementById("auth-email")||{}).value||"";
+  var pass=(document.getElementById("auth-password")||{}).value||"";
+  var err=document.getElementById("auth-error");
+  if(err)err.textContent="";
+  if(!email||!pass){if(err)err.textContent="נא להזין מייל וסיסמה";return;}
+  auth.signInWithEmailAndPassword(email.trim(),pass).catch(function(e){
+    if(err)err.textContent="התחברות נכשלה. בדוק מייל/סיסמה.";
+  });
+}
+function logoutUser(){if(auth)auth.signOut();}
+function showAuthScreen(){
+  var a=document.getElementById("auth-screen"),app=document.getElementById("app");
+  if(a)a.style.display="flex";
+  if(app)app.style.display="none";
+}
+function showAppScreen(){
+  var a=document.getElementById("auth-screen"),app=document.getElementById("app");
+  if(a)a.style.display="none";
+  if(app)app.style.display="block";
+}
 function today(){return new Date().toISOString().split("T")[0];}
 function nowDateTime(){return new Date().toISOString();}
 function fmtDateTime(v){
@@ -367,6 +454,7 @@ function processFutureLeads(){
 function saveLeads(nl){leads=normalizeLeadsList(nl);saveLocalBackup(leads);syncStatus="syncing";updateBadge();return fbWrite(leads).then(function(){lastSync=new Date();syncStatus="ok";updateBadge();return true;}).catch(function(){syncStatus="error";updateBadge();throw new Error("sync failed");});}
 function updateBadge(){var b=document.getElementById("sync-badge");if(!b)return;var ic={idle:"⏳",syncing:"🔄",ok:"✅",error:"❌"},cl={idle:"#deebff",syncing:"#ffab00",ok:"#79f2c0",error:"#ffbdad"},lb={idle:"ממתין",syncing:"שומר...",ok:lastSync?("עודכן "+lastSync.toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})):"מסונכרן",error:"שגיאה"};b.style.color=cl[syncStatus];b.innerHTML=ic[syncStatus]+" "+lb[syncStatus];}
 function init(){
+  if(initStarted)return;initStarted=true;
   fbRead().then(function(d){leads=normalizeLeadsList((d&&Array.isArray(d))?d:(loadLocalBackup()||[]));saveLocalBackup(leads);lastSync=new Date();syncStatus="ok";processFutureLeads();render();}).catch(function(){leads=normalizeLeadsList(loadLocalBackup()||[]);syncStatus="error";processFutureLeads();render();});
   setInterval(function(){var modalOpen=document.getElementById("modal-wrap")&&document.getElementById("modal-wrap").classList.contains("open");var active=document.activeElement;var typing=active&&["INPUT","TEXTAREA","SELECT"].indexOf(active.tagName)>=0;if(modalOpen||typing)return;fbRead().then(function(d){if(d&&Array.isArray(d)){leads=normalizeLeadsList(d);saveLocalBackup(leads);lastSync=new Date();syncStatus="ok";processFutureLeads();render();}}).catch(function(){syncStatus="error";updateBadge();});},15000);
 }
@@ -620,7 +708,7 @@ function render(){
 
   var mainContent=activeTab==="משימות"?renderTasksBoard():('<div class="table-wrap"><table><thead><tr>'+thHTML+'</tr></thead><tbody>'+rowsHTML+'</tbody></table></div><div class="cards">'+cardsHTML+'</div>');
   document.getElementById("app").innerHTML=
-    '<div class="header"><div><h1>☕ ניהול לידים</h1><p>סביבת עבודה בסגנון Jira • סנכרון ענן</p></div><div class="header-actions"><div class="sync-badge" id="sync-badge" style="color:#79f2c0">✅ '+syncLabel+'</div><button class="btn-tool" onclick="exportToExcel()">⬇️ ייצוא</button><button class="btn-tool" onclick="triggerImport()">⬆️ ייבוא</button><input id="excel-import-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromExcel(event)"><button class="btn-add" onclick="openAdd()">+ ליד</button></div></div>'
+    '<div class="header"><div><h1>☕ ניהול לידים</h1><p>סביבת עבודה בסגנון Jira • סנכרון ענן</p></div><div class="header-actions"><div class="sync-badge" id="sync-badge" style="color:#79f2c0">✅ '+syncLabel+'</div><div class="user-badge">'+esc((currentUser&&currentUser.email)||"")+'</div><button class="btn-logout" onclick="logoutUser()">יציאה</button><button class="btn-tool" onclick="exportToExcel()">⬇️ ייצוא</button><button class="btn-tool" onclick="triggerImport()">⬆️ ייבוא</button><input id="excel-import-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromExcel(event)"><button class="btn-add" onclick="openAdd()">+ ליד</button></div></div>'
     +'<div class="stats">'+statsHTML+'</div>'
     +'<div class="tabs">'+tabsHTML+'</div>'
     +'<div class="filters"><input id="search-box" placeholder="🔍 חיפוש..." value="'+esc(search)+'" oninput="setSearch(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><select onchange="setFilterStatus(this.value)"><option'+(filterStatus==="הכל"?" selected":"")+'>הכל</option>'+STATUS_OPTIONS.map(function(s){return '<option'+(filterStatus===s.label?" selected":"")+'>'+s.label+'</option>';}).join("")+'</select><select onchange="setFilterOwner(this.value)"><option'+(filterOwner==="הכל"?" selected":"")+'>הכל</option>'+OWNERS.map(function(o){return '<option'+(filterOwner===o?" selected":"")+'>'+o+'</option>';}).join("")+'</select><span class="count">'+filtered.length+' לידים'+(statLabel?" • "+statLabel:"")+'</span></div>'
@@ -760,7 +848,7 @@ function renderLeadTasks(){
         +'<div class="lead-task-main"><strong>'+esc(t.title)+'</strong><br><span>'+esc(t.status)+' • '+esc(t.priority)+' • '+esc(t.owner)+(t.dueDate?' • יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+t.dueTime:''):'')+'</span></div>'
         +'<div class="lead-task-actions">'
         +'<button class="task-mini-btn" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בטיפול\')">בטיפול</button>'
-        +'<button class="task-mini-btn calendar" onclick="addCurrentLeadTaskToCalendar('+JSON.stringify(t.id)+')">📅 יומן</button>'
+        +'<button class="task-mini-btn calendar" onclick="addCurrentLeadTaskToCalendar('+JSON.stringify(t.id)+')">🔔 תזכורת</button>'
         +'<button class="task-mini-btn done" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בוצעה\')">בוצע</button>'
         +'<button class="task-mini-btn snooze" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'נדחתה\')">נדחה</button>'
         +'<button class="task-mini-btn cancel" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בוטלה\')">בוטל</button>'
@@ -835,11 +923,41 @@ function addOneHourICS(dt){
   date.setHours(date.getHours()+1);
   return date.getFullYear()+pad2(date.getMonth()+1)+pad2(date.getDate())+"T"+pad2(date.getHours())+pad2(date.getMinutes())+"00";
 }
+function escapeICS(v){
+  return String(v||"")
+    .replace(/\\/g,"\\\\")
+    .replace(/\n/g,"\\n")
+    .replace(/,/g,"\\,")
+    .replace(/;/g,"\\;");
+}
 function downloadICS(title,description,date,time){
-  if(!date){alert("כדי להוסיף ליומן צריך להגדיר תאריך יעד למשימה.");return;}
-  var start=dateTimeForICS(date,time||"09:00");
-  var end=addOneHourICS(start);
-  var ics="BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Mister Bean Leads//Tasks//HE\nBEGIN:VEVENT\nUID:"+Date.now()+"@mister-bean-leads\nSUMMARY:"+title.replace(/\n/g," ")+"\nDTSTART:"+start+"\nDTEND:"+end+"\nDESCRIPTION:"+description.replace(/\n/g,"\\n")+"\nEND:VEVENT\nEND:VCALENDAR";
+  if(!date){alert("כדי להוסיף תזכורת צריך להגדיר תאריך יעד למשימה.");return;}
+
+  var due=dateTimeForICS(date,time||"09:00");
+  var created=dateTimeForICS(today(),"09:00");
+  var uid=Date.now()+"@mister-bean-leads";
+
+  var ics="BEGIN:VCALENDAR\n"
+    +"VERSION:2.0\n"
+    +"PRODID:-//Mister Bean Leads//Tasks//HE\n"
+    +"CALSCALE:GREGORIAN\n"
+    +"BEGIN:VTODO\n"
+    +"UID:"+uid+"\n"
+    +"SUMMARY:"+escapeICS(title)+"\n"
+    +"DESCRIPTION:"+escapeICS(description)+"\n"
+    +"DUE:"+due+"\n"
+    +"DTSTAMP:"+created+"\n"
+    +"CREATED:"+created+"\n"
+    +"STATUS:NEEDS-ACTION\n"
+    +"PRIORITY:5\n"
+    +"BEGIN:VALARM\n"
+    +"TRIGGER:-PT30M\n"
+    +"ACTION:DISPLAY\n"
+    +"DESCRIPTION:"+escapeICS(title)+"\n"
+    +"END:VALARM\n"
+    +"END:VTODO\n"
+    +"END:VCALENDAR";
+
   var blob=new Blob([ics],{type:"text/calendar;charset=utf-8"});
   var a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
@@ -926,7 +1044,7 @@ function renderTasksBoard(){
           +'<div class="task-title">'+esc(t.title)+'</div>'
           +'<div class="task-meta">ליד: <a href="#" onclick="event.preventDefault();openEdit('+JSON.stringify(l.id)+')">'+esc(l.company)+'</a><br>אחראי: '+esc(t.owner)+' • עדיפות: '+esc(t.priority)+'<br>'+(t.dueDate?'יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+t.dueTime:'')+'<br>':'')+'סטטוס ליד: '+esc(l.status)+'</div>'
           +'<div class="task-actions">'
-          +'<button class="task-mini-btn calendar" onclick="addTaskToCalendar('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+')">📅 יומן</button>'
+          +'<button class="task-mini-btn calendar" onclick="addTaskToCalendar('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+')">🔔 תזכורת</button>'
           +(st!=="בטיפול"?'<button class="task-mini-btn" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בטיפול\')">בטיפול</button>':'')
           +(st!=="בוצעה"?'<button class="task-mini-btn done" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בוצעה\')">בוצע</button>':'')
           +(st!=="נדחתה"?'<button class="task-mini-btn snooze" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'נדחתה\')">נדחה</button>':'')
@@ -980,7 +1098,22 @@ document.addEventListener("click",function(e){
 });
 
 
-populateSelects();init();
+populateSelects();
+if(auth){
+  auth.onAuthStateChanged(function(user){
+    currentUser=user||null;
+    if(user){
+      showAppScreen();
+      init();
+    }else{
+      leads=[];
+      initStarted=false;
+      showAuthScreen();
+    }
+  });
+}else{
+  showAuthScreen();
+}
 </script>
 </body>
 </html>
