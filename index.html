@@ -192,6 +192,20 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
 .btn-logout{border:none;border-radius:6px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer;font-family:inherit;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.2)}
 @media(max-width:760px){.user-badge{display:none}.btn-logout{padding:7px 8px;font-size:11px}}
 
+
+/* Stable date/time direction inside Hebrew UI */
+input[type="date"],
+input[type="time"],
+#f_lastUpdatedDisplay,
+#task_dueDate,
+#task_dueTime,
+#f_followUpDate,
+#f_meetingDate {
+  direction:ltr!important;
+  text-align:left!important;
+  unicode-bidi:plaintext;
+}
+
 </style>
 </head>
 <body>
@@ -226,7 +240,7 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
       <div class="field"><label>אחראי</label><select id="f_owner"></select></div>
       <div class="field"><label>רמת עדיפות</label><select id="f_priority"></select></div>
       <div class="field"><label>סטטוס</label><select id="f_status" onchange="updateMeetingSection()"></select></div>
-      <div class="field"><label>תאריך פולואפ</label><input type="date" id="f_followUpDate"></div>
+      <div class="field"><label>תאריך פולואפ</label><input type="date" id="f_followUpDate" dir="ltr"></div>
     </div>
 
     <div class="section-title">מידע עסקי</div>
@@ -243,19 +257,19 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
     <div id="lead-tasks-list" class="task-list-in-lead"></div>
     <div class="task-form-grid">
       <input id="task_title" type="text" placeholder="משימה חדשה" autocomplete="off">
-      <input id="task_dueDate" type="date">
-      <input id="task_dueTime" type="time">
+      <input id="task_dueDate" type="date" dir="ltr">
+      <input id="task_dueTime" type="time" dir="ltr">
       <select id="task_priority"><option>בינונית</option><option>גבוהה</option><option>נמוכה</option></select>
       <select id="task_owner"></select>
     </div>
     <button class="btn-task-add" onclick="addTaskToCurrentLead()">+ הוסף משימה</button>
 
-    <div class="field"><label>תאריך עדכון אחרון</label><input type="text" id="f_lastUpdatedDisplay" readonly style="background:#f4f5f7;color:#5e6c84"></div>
+    <div class="field"><label>תאריך עדכון אחרון</label><input type="text" id="f_lastUpdatedDisplay" dir="ltr" readonly style="background:#f4f5f7;color:#5e6c84"></div>
 
     <div id="meeting-section" class="meeting-box" style="display:none">
       <div class="meeting-box-title">📅 פרטי פגישה</div>
       <div class="meeting-grid">
-        <div class="field"><label>תאריך פגישה</label><input type="date" id="f_meetingDate"></div>
+        <div class="field"><label>תאריך פגישה</label><input type="date" id="f_meetingDate" dir="ltr"></div>
         <div class="field"><label>שעה</label><input type="time" id="f_meetingTime" value="09:00"></div>
       </div>
       <div class="field"><label>מיקום פגישה</label><input type="text" id="f_meetingLocation" placeholder="משרד הלקוח, זום, וכו׳" autocomplete="off"></div>
@@ -848,7 +862,7 @@ function renderLeadTasks(){
         +'<div class="lead-task-main"><strong>'+esc(t.title)+'</strong><br><span>'+esc(t.status)+' • '+esc(t.priority)+' • '+esc(t.owner)+(t.dueDate?' • יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+t.dueTime:''):'')+'</span></div>'
         +'<div class="lead-task-actions">'
         +'<button class="task-mini-btn" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בטיפול\')">בטיפול</button>'
-        +'<button class="task-mini-btn calendar" onclick="addCurrentLeadTaskToCalendar('+JSON.stringify(t.id)+')">🔔 תזכורת</button>'
+        +'<button class="task-mini-btn calendar" onclick="addCurrentLeadTaskToCalendar('+JSON.stringify(t.id)+')">📅 יומן</button>'
         +'<button class="task-mini-btn done" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בוצעה\')">בוצע</button>'
         +'<button class="task-mini-btn snooze" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'נדחתה\')">נדחה</button>'
         +'<button class="task-mini-btn cancel" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בוטלה\')">בוטל</button>'
@@ -931,31 +945,31 @@ function escapeICS(v){
     .replace(/;/g,"\\;");
 }
 function downloadICS(title,description,date,time){
-  if(!date){alert("כדי להוסיף תזכורת צריך להגדיר תאריך יעד למשימה.");return;}
+  if(!date){alert("כדי להוסיף ליומן צריך להגדיר תאריך יעד למשימה.");return;}
 
-  var due=dateTimeForICS(date,time||"09:00");
-  var created=dateTimeForICS(today(),"09:00");
+  var start=dateTimeForICS(date,time||"09:00");
+  var end=addOneHourICS(start);
+  var stamp=dateTimeForICS(today(),"09:00");
   var uid=Date.now()+"@mister-bean-leads";
 
   var ics="BEGIN:VCALENDAR\n"
     +"VERSION:2.0\n"
     +"PRODID:-//Mister Bean Leads//Tasks//HE\n"
     +"CALSCALE:GREGORIAN\n"
-    +"BEGIN:VTODO\n"
+    +"METHOD:PUBLISH\n"
+    +"BEGIN:VEVENT\n"
     +"UID:"+uid+"\n"
     +"SUMMARY:"+escapeICS(title)+"\n"
     +"DESCRIPTION:"+escapeICS(description)+"\n"
-    +"DUE:"+due+"\n"
-    +"DTSTAMP:"+created+"\n"
-    +"CREATED:"+created+"\n"
-    +"STATUS:NEEDS-ACTION\n"
-    +"PRIORITY:5\n"
+    +"DTSTART:"+start+"\n"
+    +"DTEND:"+end+"\n"
+    +"DTSTAMP:"+stamp+"\n"
     +"BEGIN:VALARM\n"
     +"TRIGGER:-PT30M\n"
     +"ACTION:DISPLAY\n"
     +"DESCRIPTION:"+escapeICS(title)+"\n"
     +"END:VALARM\n"
-    +"END:VTODO\n"
+    +"END:VEVENT\n"
     +"END:VCALENDAR";
 
   var blob=new Blob([ics],{type:"text/calendar;charset=utf-8"});
@@ -1044,7 +1058,7 @@ function renderTasksBoard(){
           +'<div class="task-title">'+esc(t.title)+'</div>'
           +'<div class="task-meta">ליד: <a href="#" onclick="event.preventDefault();openEdit('+JSON.stringify(l.id)+')">'+esc(l.company)+'</a><br>אחראי: '+esc(t.owner)+' • עדיפות: '+esc(t.priority)+'<br>'+(t.dueDate?'יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+t.dueTime:'')+'<br>':'')+'סטטוס ליד: '+esc(l.status)+'</div>'
           +'<div class="task-actions">'
-          +'<button class="task-mini-btn calendar" onclick="addTaskToCalendar('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+')">🔔 תזכורת</button>'
+          +'<button class="task-mini-btn calendar" onclick="addTaskToCalendar('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+')">📅 יומן</button>'
           +(st!=="בטיפול"?'<button class="task-mini-btn" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בטיפול\')">בטיפול</button>':'')
           +(st!=="בוצעה"?'<button class="task-mini-btn done" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בוצעה\')">בוצע</button>':'')
           +(st!=="נדחתה"?'<button class="task-mini-btn snooze" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'נדחתה\')">נדחה</button>':'')
