@@ -2,9 +2,8 @@
 <html dir="rtl" lang="he">
 <head>
 <meta charset="UTF-8">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Mister Bean Leads</title>
+<title>☕ ניהול לידים</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;min-height:100%;overscroll-behavior:none}
@@ -207,83 +206,12 @@ input[type="time"],
   unicode-bidi:plaintext;
 }
 
-
-/* Mister Bean branding */
-.brand-wrap{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  justify-content:flex-end;
-}
-.brand-logo{
-  width:58px;
-  height:58px;
-  object-fit:contain;
-  background:rgba(255,255,255,.12);
-  border:1px solid rgba(255,255,255,.18);
-  border-radius:14px;
-  padding:5px;
-  flex:0 0 auto;
-}
-.brand-text h1{margin:0}
-.auth-logo{
-  width:96px;
-  height:96px;
-  object-fit:contain;
-  display:block;
-  margin:0 auto 12px;
-}
-@media(max-width:760px){
-  .brand-wrap{gap:8px;align-items:center}
-  .brand-logo{width:44px;height:44px;border-radius:11px;padding:4px}
-  .brand-text h1{font-size:15px!important}
-  .brand-text p{font-size:11px!important}
-}
-
-
-/* v46 stable task controls */
-.task-status-select{
-  border:1px solid #dfe1e6;
-  background:#fff;
-  border-radius:6px;
-  padding:5px 7px;
-  font-size:11px;
-  font-weight:800;
-  color:#172b4d;
-  font-family:inherit;
-  min-width:92px;
-  pointer-events:auto!important;
-}
-.task-actions,
-.lead-task-actions{
-  position:relative;
-  z-index:20;
-}
-.task-mini-btn,
-.task-status-select{
-  cursor:pointer;
-  touch-action:manipulation;
-}
-html,body{
-  overflow-y:auto!important;
-  scroll-behavior:auto!important;
-}
-
 </style>
-
-<link rel="icon" type="image/png" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-512.png">
-<link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#0C4CA3">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Mister Bean">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-
 </head>
 <body>
 
 <div id="auth-screen" class="auth-screen" style="display:none">
-  <div class="auth-card"><img class="auth-logo" src="logo.png" alt="Mister Bean">
+  <div class="auth-card">
     <div class="auth-title">כניסה למערכת</div>
     <div class="auth-subtitle">התחברות מורשית למערכת ניהול הלידים של Mister Bean</div>
     <div class="auth-field"><label>מייל</label><input id="auth-email" type="email" autocomplete="email" placeholder="you@example.com"></div>
@@ -439,11 +367,6 @@ function showAppScreen(){
 }
 function today(){return new Date().toISOString().split("T")[0];}
 function nowDateTime(){return new Date().toISOString();}
-
-function newStableId(prefix){
-  return (prefix||"id")+"_"+Date.now()+"_"+Math.floor(Math.random()*1000000);
-}
-
 function fmtDateTime(v){
   if(!v)return "—";
   var d=new Date(v);
@@ -457,36 +380,19 @@ function safeTel(t){return String(t||"").replace(/[^\d+]/g,"");}
 function loadLocalBackup(){try{var raw=localStorage.getItem("misterBeanLeadsBackup");var p=raw?JSON.parse(raw):null;return Array.isArray(p)?p:null;}catch(e){return null;}}
 function saveLocalBackup(d){try{localStorage.setItem("misterBeanLeadsBackup",JSON.stringify(d));}catch(e){}}
 function normalizeLead(l){
-  l=l||{};
-  if(OLD_STATUS_MAP[l.status])l.status=OLD_STATUS_MAP[l.status];
+  l=l||{}; if(OLD_STATUS_MAP[l.status])l.status=OLD_STATUS_MAP[l.status];
   if(l.phone&&!l.email&&String(l.phone).indexOf("@")>=0){l.email=l.phone;l.phone="";}
-  ["company","location","connection","contact","role","phone","email","currentStatus","notes","nextAction","meetingDate","meetingLocation","meetingGuest","followUpDate","hasContract","supplier","machineType","monthlyConsumption","pricePerKg"].forEach(function(k){
-    if(l[k]===undefined||l[k]===null)l[k]="";
-  });
-
-  if(!l.id)l.id=newStableId("lead");
-
-  if(!l.employees)l.employees=0;
-  if(!l.owner)l.owner="בועז";
-  if(!l.status)l.status="לא טופל";
-  if(!l.sheet)l.sheet="ראשוני";
-  if(!l.lastUpdated)l.lastUpdated=today();
-  if(!l.lastUpdatedAt)l.lastUpdatedAt=(l.lastUpdated?l.lastUpdated+"T09:00:00":nowDateTime());
-  if(!l.meetingTime)l.meetingTime="09:00";
-  if(!l.priority)l.priority="בינונית";
-  if(l.machineCount===undefined)l.machineCount="";
-  if(l.deleted===undefined)l.deleted=false;
-
+  ["company","location","connection","contact","role","phone","email","currentStatus","notes","nextAction","meetingDate","meetingLocation","meetingGuest","followUpDate","hasContract","supplier","machineType","monthlyConsumption","pricePerKg"].forEach(function(k){if(l[k]===undefined||l[k]===null)l[k]="";});
+  if(!l.id)l.id=Date.now()+Math.floor(Math.random()*100000);
   l.tasks=normalizeTasksList(l.tasks,l);
-
+  if(!l.employees)l.employees=0; if(!l.owner)l.owner="בועז"; if(!l.status)l.status="לא טופל"; if(!l.sheet)l.sheet="ראשוני"; if(!l.lastUpdated)l.lastUpdated=today();l.lastUpdatedAt=nowDateTime(); if(!l.lastUpdatedAt)l.lastUpdatedAt=(l.lastUpdated?l.lastUpdated+"T09:00:00":nowDateTime()); if(!l.meetingTime)l.meetingTime="09:00"; if(!l.priority)l.priority="בינונית"; if(l.machineCount===undefined)l.machineCount=""; if(l.deleted===undefined)l.deleted=false;
   return l;
 }
 function normalizeLeadsList(a){return(Array.isArray(a)?a:[]).map(function(l){return normalizeLead(l);});}
 
 function normalizeTask(t,lead){
   t=t||{};
-  if(!t.id)t.id=newStableId("task");
-  if(lead&&lead.id)t.leadId=String(lead.id);
+  if(!t.id)t.id=Date.now()+Math.floor(Math.random()*1000000);
   if(!t.title)t.title="";
   if(!t.status)t.status="פתוחה";
   if(!t.priority)t.priority=(lead&&lead.priority)||"בינונית";
@@ -522,9 +428,7 @@ function getAllTasks(){
     l=normalizeLead(l);
     if(l.deleted)return;
     (l.tasks||[]).forEach(function(t){
-      t=normalizeTask(t,l);
-      if(String(t.leadId)!==String(l.id))return;
-      out.push({lead:l,task:t});
+      out.push({lead:l,task:normalizeTask(t,l)});
     });
   });
   return out;
@@ -542,7 +446,8 @@ function isActiveProcessLead(l){
   return !l.deleted
     && l.status!=="לא רלוונטי"
     && l.status!=="נסגר"
-    && l.status!=="לפנייה עתידית";
+    && l.status!=="לפנייה עתידית"
+    && l.status!=="נשלחה הצעת מחיר";
 }
 function processFutureLeads(){
   var changed=false;
@@ -562,43 +467,12 @@ function processFutureLeads(){
 
 function saveLeads(nl){leads=normalizeLeadsList(nl);saveLocalBackup(leads);syncStatus="syncing";updateBadge();return fbWrite(leads).then(function(){lastSync=new Date();syncStatus="ok";updateBadge();return true;}).catch(function(){syncStatus="error";updateBadge();throw new Error("sync failed");});}
 function updateBadge(){var b=document.getElementById("sync-badge");if(!b)return;var ic={idle:"⏳",syncing:"🔄",ok:"✅",error:"❌"},cl={idle:"#deebff",syncing:"#ffab00",ok:"#79f2c0",error:"#ffbdad"},lb={idle:"ממתין",syncing:"שומר...",ok:lastSync?("עודכן "+lastSync.toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})):"מסונכרן",error:"שגיאה"};b.style.color=cl[syncStatus];b.innerHTML=ic[syncStatus]+" "+lb[syncStatus];}
-
-function repairTaskLinks(){
-  var changed=false;
-  leads=normalizeLeadsList(leads.map(function(l){
-    l=normalizeLead(l);
-    var tasks=(l.tasks||[]).map(function(t){
-      var before=t.leadId;
-      t=normalizeTask(t,l);
-      if(String(before||"")!==String(l.id))changed=true;
-      return t;
-    });
-    l.tasks=tasks;
-    return l;
-  }));
-  if(changed){
-    saveLocalBackup(leads);
-    fbWrite(leads).then(function(){lastSync=new Date();syncStatus="ok";updateBadge();}).catch(function(){syncStatus="error";updateBadge();});
-  }
-}
-
 function init(){
-  if(initStarted)return;
-  initStarted=true;
-  fbRead().then(function(d){
-    leads=normalizeLeadsList((d&&Array.isArray(d))?d:(loadLocalBackup()||[]));
-    saveLocalBackup(leads);
-    lastSync=new Date();
-    syncStatus="ok";
-    processFutureLeads();
-    render();
-  }).catch(function(){
-    leads=normalizeLeadsList(loadLocalBackup()||[]);
-    syncStatus="error";
-    processFutureLeads();
-    render();
-  });
+  if(initStarted)return;initStarted=true;
+  fbRead().then(function(d){leads=normalizeLeadsList((d&&Array.isArray(d))?d:(loadLocalBackup()||[]));saveLocalBackup(leads);lastSync=new Date();syncStatus="ok";processFutureLeads();render();}).catch(function(){leads=normalizeLeadsList(loadLocalBackup()||[]);syncStatus="error";processFutureLeads();render();});
+  setInterval(function(){var modalOpen=document.getElementById("modal-wrap")&&document.getElementById("modal-wrap").classList.contains("open");var active=document.activeElement;var typing=active&&["INPUT","TEXTAREA","SELECT"].indexOf(active.tagName)>=0;if(modalOpen||typing)return;fbRead().then(function(d){if(d&&Array.isArray(d)){leads=normalizeLeadsList(d);saveLocalBackup(leads);lastSync=new Date();syncStatus="ok";processFutureLeads();render();}}).catch(function(){syncStatus="error";updateBadge();});},15000);
 }
+
 function isTodayWorkLead(l){
   l=normalizeLead(l);
   return isActiveProcessLead(l) && (isDue(l.followUpDate) || l.priority==="גבוהה");
@@ -848,7 +722,7 @@ function render(){
 
   var mainContent=activeTab==="משימות"?renderTasksBoard():('<div class="table-wrap"><table><thead><tr>'+thHTML+'</tr></thead><tbody>'+rowsHTML+'</tbody></table></div><div class="cards">'+cardsHTML+'</div>');
   document.getElementById("app").innerHTML=
-    '<div class="header"><div class="brand-wrap"><img class="brand-logo" src="logo.png" alt="Mister Bean"><div class="brand-text"><h1>ניהול לידים</h1><p>סביבת עבודה בסגנון Jira • סנכרון ענן</p></div></div><div class="header-actions"><div class="sync-badge" id="sync-badge" style="color:#79f2c0">✅ '+syncLabel+'</div><div class="user-badge">'+esc((currentUser&&currentUser.email)||"")+'</div><button class="btn-logout" onclick="logoutUser()">יציאה</button><button class="btn-tool" onclick="exportToExcel()">⬇️ ייצוא</button><button class="btn-tool" onclick="triggerImport()">⬆️ ייבוא</button><input id="excel-import-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromExcel(event)"><button class="btn-add" onclick="openAdd()">+ ליד</button></div></div>'
+    '<div class="header"><div><h1>☕ ניהול לידים</h1><p>סביבת עבודה בסגנון Jira • סנכרון ענן</p></div><div class="header-actions"><div class="sync-badge" id="sync-badge" style="color:#79f2c0">✅ '+syncLabel+'</div><div class="user-badge">'+esc((currentUser&&currentUser.email)||"")+'</div><button class="btn-logout" onclick="logoutUser()">יציאה</button><button class="btn-tool" onclick="exportToExcel()">⬇️ ייצוא</button><button class="btn-tool" onclick="triggerImport()">⬆️ ייבוא</button><input id="excel-import-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromExcel(event)"><button class="btn-add" onclick="openAdd()">+ ליד</button></div></div>'
     +'<div class="stats">'+statsHTML+'</div>'
     +'<div class="tabs">'+tabsHTML+'</div>'
     +'<div class="filters"><input id="search-box" placeholder="🔍 חיפוש..." value="'+esc(search)+'" oninput="setSearch(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><select onchange="setFilterStatus(this.value)"><option'+(filterStatus==="הכל"?" selected":"")+'>הכל</option>'+STATUS_OPTIONS.map(function(s){return '<option'+(filterStatus===s.label?" selected":"")+'>'+s.label+'</option>';}).join("")+'</select><select onchange="setFilterOwner(this.value)"><option'+(filterOwner==="הכל"?" selected":"")+'>הכל</option>'+OWNERS.map(function(o){return '<option'+(filterOwner===o?" selected":"")+'>'+o+'</option>';}).join("")+'</select><span class="count">'+filtered.length+' לידים'+(statLabel?" • "+statLabel:"")+'</span></div>'
@@ -950,9 +824,9 @@ function openEdit(id){
   if(d)d.style.display="block";
   openModalUI();
 }
-function openAdd(){currentLead=normalizeLead({id:newStableId("lead"),company:"",owner:"בועז",priority:"בינונית",status:"לא טופל",sheet:"ראשוני",lastUpdated:today(),meetingTime:"09:00",deleted:false});isAdding=true;setForm(currentLead);document.getElementById("modal-title-text").textContent="ליד חדש";var d=document.getElementById("btn-delete-lead");if(d)d.style.display="none";openModalUI();}
-function buildLeadFromForm(){return normalizeLead(Object.assign({},currentLead,{company:g("f_company").trim(),employees:Number(g("f_employees"))||0,location:g("f_location").trim(),connection:g("f_connection").trim(),contact:g("f_contact").trim(),role:g("f_role").trim(),phone:g("f_phone").trim(),email:g("f_email").trim(),owner:g("f_owner"),priority:g("f_priority")||"בינונית",status:g("f_status"),followUpDate:g("f_followUpDate"),hasContract:g("f_hasContract"),supplier:g("f_supplier").trim(),machineType:g("f_machineType").trim(),machineCount:g("f_machineCount"),monthlyConsumption:g("f_monthlyConsumption").trim(),pricePerKg:g("f_pricePerKg"),currentStatus:currentLead.currentStatus||"",notes:g("f_notes").trim(),lastUpdated:today(),lastUpdatedAt:nowDateTime(),meetingDate:g("f_meetingDate"),meetingTime:g("f_meetingTime")||"09:00",meetingLocation:g("f_meetingLocation").trim(),meetingGuest:g("f_meetingGuest").trim(),sheet:currentLead.sheet||"ראשוני",tasks:normalizeTasksList(currentLead.tasks||[],currentLead)}));}
-function saveLead(){if(!currentLead){alert("שגיאה: לא נמצא ליד פעיל לשמירה");return;}var b=document.querySelector(".btn-save");if(b){b.disabled=true;b.textContent="שומר...";}var wasAdding=isAdding,updated=buildLeadFromForm();if(updated.status==="לפנייה עתידית"&&!updated.followUpDate){alert("נא להזין תאריך פנייה עתידית");if(b){b.disabled=false;b.textContent="💾 שמור";}return;}if(!updated.company){alert("נא להזין שם חברה");if(b){b.disabled=false;b.textContent="💾 שמור";}return;}var duplicate=findDuplicateLead(updated,updated.id);if(duplicate&&!confirm("נראה שכבר קיים ליד דומה: "+duplicate.company+"\nלהמשיך לשמור בכל זאת?")){if(b){b.disabled=false;b.textContent="💾 שמור";}return;}updated.tasks=normalizeTasksList(updated.tasks,updated);var nl=wasAdding?leads.concat([updated]):leads.map(function(l){return String(l.id)===String(updated.id)?updated:l;});saveLeads(nl).then(function(){closeModal();render();}).catch(function(){closeModal();render();alert("הליד נשמר מקומית במכשיר, אבל לא הצליח להסתנכרן לענן.");});}
+function openAdd(){currentLead=normalizeLead({id:0,company:"",owner:"בועז",priority:"בינונית",status:"לא טופל",sheet:"ראשוני",lastUpdated:today(),meetingTime:"09:00",deleted:false});isAdding=true;setForm(currentLead);document.getElementById("modal-title-text").textContent="ליד חדש";var d=document.getElementById("btn-delete-lead");if(d)d.style.display="none";openModalUI();}
+function buildLeadFromForm(){return normalizeLead(Object.assign({},currentLead,{company:g("f_company").trim(),employees:Number(g("f_employees"))||0,location:g("f_location").trim(),connection:g("f_connection").trim(),contact:g("f_contact").trim(),role:g("f_role").trim(),phone:g("f_phone").trim(),email:g("f_email").trim(),owner:g("f_owner"),priority:g("f_priority")||"בינונית",status:g("f_status"),followUpDate:g("f_followUpDate"),hasContract:g("f_hasContract"),supplier:g("f_supplier").trim(),machineType:g("f_machineType").trim(),machineCount:g("f_machineCount"),monthlyConsumption:g("f_monthlyConsumption").trim(),pricePerKg:g("f_pricePerKg"),currentStatus:currentLead.currentStatus||"",notes:g("f_notes").trim(),lastUpdated:today(),lastUpdatedAt:nowDateTime(),meetingDate:g("f_meetingDate"),meetingTime:g("f_meetingTime")||"09:00",meetingLocation:g("f_meetingLocation").trim(),meetingGuest:g("f_meetingGuest").trim(),sheet:currentLead.sheet||"ראשוני"}));}
+function saveLead(){if(!currentLead){alert("שגיאה: לא נמצא ליד פעיל לשמירה");return;}var b=document.querySelector(".btn-save");if(b){b.disabled=true;b.textContent="שומר...";}var wasAdding=isAdding,updated=buildLeadFromForm();if(updated.status==="לפנייה עתידית"&&!updated.followUpDate){alert("נא להזין תאריך פנייה עתידית");if(b){b.disabled=false;b.textContent="💾 שמור";}return;}if(!updated.company){alert("נא להזין שם חברה");if(b){b.disabled=false;b.textContent="💾 שמור";}return;}var duplicate=findDuplicateLead(updated,updated.id);if(duplicate&&!confirm("נראה שכבר קיים ליד דומה: "+duplicate.company+"\nלהמשיך לשמור בכל זאת?")){if(b){b.disabled=false;b.textContent="💾 שמור";}return;}var nl=wasAdding?leads.concat([Object.assign(updated,{id:Date.now()})]):leads.map(function(l){return String(l.id)===String(updated.id)?updated:l;});saveLeads(nl).then(function(){closeModal();render();}).catch(function(){closeModal();render();alert("הליד נשמר מקומית במכשיר, אבל לא הצליח להסתנכרן לענן.");});}
 function deleteLead(){if(!currentLead||isAdding)return;if(!confirm("למחוק את "+(currentLead.company||"הליד")+" מהרשימה?\nהליד יעבור לכרטיסיית נמחקו ולא יימחק לצמיתות."))return;var id=currentLead.id,nl=leads.map(function(l){return String(l.id)===String(id)?Object.assign({},l,{deleted:true,deletedAt:new Date().toISOString(),lastUpdated:today(),lastUpdatedAt:nowDateTime()}):l;});saveLeads(nl).then(function(){closeModal();activeTab="נמחקו";render();}).catch(function(){closeModal();activeTab="נמחקו";render();alert("הליד נמחק מקומית, אבל לא הצליח להסתנכרן לענן.");});}
 function updateStatus(id,status){
   var sid=String(id);
@@ -970,131 +844,39 @@ function updateStatus(id,status){
   saveLeads(leads).catch(function(){alert("השינוי נשמר מקומית, אבל לא הסתנכרן לענן.");});
 }
 
-
-function persistCurrentLeadSilently(){
-  if(!currentLead||isAdding)return;
-  currentLead=normalizeLead(currentLead);
-  var sid=String(currentLead.id);
-  var found=false;
-  leads=normalizeLeadsList(leads.map(function(l){
-    if(String(l.id)===sid){
-      found=true;
-      return normalizeLead(currentLead);
-    }
-    return l;
-  }));
-  if(!found)return;
-  saveLocalBackup(leads);
-  syncStatus="syncing";
-  updateBadge();
-  fbWrite(leads).then(function(){
-    lastSync=new Date();
-    syncStatus="ok";
-    updateBadge();
-  }).catch(function(){
-    syncStatus="error";
-    updateBadge();
-  });
-}
-
-
-function setCurrentLeadTaskStatus(taskId,status){
-  if(!currentLead)return;
-  currentLead=buildLeadFromForm();
-  currentLead=normalizeLead(currentLead);
-  var found=false;
-  currentLead.tasks=(currentLead.tasks||[]).map(function(t){
-    t=normalizeTask(t,currentLead);
-    if(String(t.id)!==String(taskId))return t;
-    found=true;
-    return Object.assign({},t,{
-      status:status,
-      leadId:String(currentLead.id),
-      updatedAt:today(),
-      completedAt:status==="בוצעה"?today():(t.completedAt||"")
-    });
-  });
-  if(!found){alert("המשימה לא נמצאה בליד הזה.");return;}
-  currentLead.lastUpdated=today();
-  currentLead.lastUpdatedAt=nowDateTime();
-  renderLeadTasks();
-  persistCurrentLeadSilently();
-}
-
-function setGlobalTaskStatus(leadId,taskId,status){
-  var found=false;
-  leads=normalizeLeadsList(leads.map(function(l){
-    if(String(l.id)!==String(leadId))return l;
-    l=normalizeLead(l);
-    l.tasks=(l.tasks||[]).map(function(t){
-      t=normalizeTask(t,l);
-      if(String(t.id)!==String(taskId))return t;
-      found=true;
-      return Object.assign({},t,{
-        status:status,
-        leadId:String(l.id),
-        updatedAt:today(),
-        completedAt:status==="בוצעה"?today():(t.completedAt||"")
-      });
-    });
-    if(found){
-      l.lastUpdated=today();
-      l.lastUpdatedAt=nowDateTime();
-    }
-    return l;
-  }));
-  if(!found){alert("המשימה לא נמצאה.");return;}
-  saveLocalBackup(leads);
-  render();
-  saveLeads(leads).catch(function(){
-    alert("המשימה נשמרה מקומית, אבל לא הסתנכרנה לענן.");
-  });
-}
-
 function renderLeadTasks(){
   var box=document.getElementById("lead-tasks-list");
   if(!box||!currentLead)return;
   currentLead=normalizeLead(currentLead);
-  var tasks=(currentLead.tasks||[]).filter(function(t){
-    return String((t.leadId||currentLead.id))===String(currentLead.id);
-  });
-
+  var tasks=currentLead.tasks||[];
   if(!tasks.length){
     box.innerHTML='<div style="font-size:12px;color:#6b778c">אין משימות לליד הזה.</div>';
-    return;
-  }
-
-  box.innerHTML=tasks.slice().sort(function(a,b){
-    var ad=a.dueDate||"9999-12-31",bd=b.dueDate||"9999-12-31";
-    if(ad!==bd)return ad>bd?1:-1;
-    return String(a.status||"").localeCompare(String(b.status||""),"he");
-  }).map(function(t){
-    t=normalizeTask(t,currentLead);
-    var due=isTaskDue(t),over=isTaskOverdue(t);
-    var rowStyle=over?'background:#ffebe6;padding-right:6px;border-radius:6px':(due?'background:#fff7d6;padding-right:6px;border-radius:6px':'');
-    var options=TASK_STATUS_OPTIONS.map(function(s){
-      return '<option value="'+esc(s)+'" '+(t.status===s?'selected':'')+'>'+esc(s)+'</option>';
+  }else{
+    box.innerHTML=tasks.slice().sort(function(a,b){
+      var ad=a.dueDate||"9999-12-31",bd=b.dueDate||"9999-12-31";
+      if(ad!==bd)return ad>bd?1:-1;
+      return a.status>b.status?1:-1;
+    }).map(function(t){
+      var due=isTaskDue(t),over=isTaskOverdue(t);
+      return '<div class="lead-task-row" style="'+(over?'background:#ffebe6;padding-right:6px;border-radius:6px':(due?'background:#fff7d6;padding-right:6px;border-radius:6px':''))+'">'
+        +'<div class="lead-task-main"><strong>'+esc(t.title)+'</strong><br><span>'+esc(t.status)+' • '+esc(t.priority)+' • '+esc(t.owner)+(t.dueDate?' • יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+t.dueTime:''):'')+'</span></div>'
+        +'<div class="lead-task-actions">'
+        +'<button class="task-mini-btn" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בטיפול\')">בטיפול</button>'
+        +'<button class="task-mini-btn calendar" onclick="addCurrentLeadTaskToCalendar('+JSON.stringify(t.id)+')">📅 יומן</button>'
+        +'<button class="task-mini-btn done" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בוצעה\')">בוצע</button>'
+        +'<button class="task-mini-btn snooze" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'נדחתה\')">נדחה</button>'
+        +'<button class="task-mini-btn cancel" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בוטלה\')">בוטל</button>'
+        +'</div></div>';
     }).join("");
-
-    return '<div class="lead-task-row" style="'+rowStyle+'">'
-      +'<div class="lead-task-main"><strong>'+esc(t.title)+'</strong><br><span>עדיפות: '+esc(t.priority)+' • אחראי: '+esc(t.owner)+(t.dueDate?' • יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+esc(t.dueTime):''):'')+'</span></div>'
-      +'<div class="lead-task-actions">'
-        +'<select class="task-status-select" onchange="setCurrentLeadTaskStatus('+JSON.stringify(String(t.id))+',this.value)">'+options+'</select>'
-        +'<button type="button" class="task-mini-btn calendar" onclick="addCurrentLeadTaskToCalendar('+JSON.stringify(String(t.id))+')">📅 יומן + התראה</button>'
-      +'</div></div>';
-  }).join("");
+  }
+  var owner=document.getElementById("task_owner");
+  if(owner)owner.value=currentLead.owner||"בועז";
 }
 function addTaskToCurrentLead(){
   if(!currentLead)return;
   var title=((document.getElementById("task_title")||{}).value||"").trim();
   if(!title){alert("נא להזין שם משימה");return;}
-
-  currentLead=buildLeadFromForm();
-  currentLead=normalizeLead(currentLead);
-
   var t=normalizeTask({
-    id:newStableId("task"),
-    leadId:String(currentLead.id),
     title:title,
     dueDate:(document.getElementById("task_dueDate")||{}).value||"",
     dueTime:(document.getElementById("task_dueTime")||{}).value||"09:00",
@@ -1104,56 +886,33 @@ function addTaskToCurrentLead(){
     createdAt:today(),
     updatedAt:today()
   },currentLead);
-
-  currentLead.tasks=(currentLead.tasks||[]).filter(function(existing){
-    return String(existing.id)!==String(t.id);
-  }).concat([t]);
-  currentLead.lastUpdated=today();
-  currentLead.lastUpdatedAt=nowDateTime();
-
+  currentLead=normalizeLead(currentLead);
+  currentLead.tasks=(currentLead.tasks||[]).concat([t]);
+  currentLead.lastUpdated=today();currentLead.lastUpdatedAt=nowDateTime();
   var titleEl=document.getElementById("task_title");if(titleEl)titleEl.value="";
   var dateEl=document.getElementById("task_dueDate");if(dateEl)dateEl.value="";
   var timeEl=document.getElementById("task_dueTime");if(timeEl)timeEl.value="09:00";
-
   renderLeadTasks();
-  persistCurrentLeadSilently();
 }
 function updateTaskInCurrentLead(taskId,status){
   if(!currentLead)return;
-  currentLead=buildLeadFromForm();
   currentLead=normalizeLead(currentLead);
   currentLead.tasks=(currentLead.tasks||[]).map(function(t){
-    t=normalizeTask(t,currentLead);
-    return String(t.id)===String(taskId)?Object.assign({},t,{
-      leadId:String(currentLead.id),
-      status:status,
-      updatedAt:today(),
-      completedAt:status==="בוצעה"?today():(t.completedAt||"")
-    }):t;
+    return String(t.id)===String(taskId)?Object.assign({},t,{status:status,updatedAt:today(),completedAt:status==="בוצעה"?today():(t.completedAt||"")}):t;
   });
-  currentLead.lastUpdated=today();
-  currentLead.lastUpdatedAt=nowDateTime();
+  currentLead.lastUpdated=today();currentLead.lastUpdatedAt=nowDateTime();
   renderLeadTasks();
-  persistCurrentLeadSilently();
 }
 function updateTaskGlobal(leadId,taskId,status){
-  leads=normalizeLeadsList(leads.map(function(l){
+  leads=leads.map(function(l){
     if(String(l.id)!==String(leadId))return l;
     l=normalizeLead(l);
     l.tasks=(l.tasks||[]).map(function(t){
-      t=normalizeTask(t,l);
-      if(String(t.id)!==String(taskId))return t;
-      return Object.assign({},t,{
-        leadId:String(l.id),
-        status:status,
-        updatedAt:today(),
-        completedAt:status==="בוצעה"?today():(t.completedAt||"")
-      });
+      return String(t.id)===String(taskId)?Object.assign({},t,{status:status,updatedAt:today(),completedAt:status==="בוצעה"?today():(t.completedAt||"")}):t;
     });
-    l.lastUpdated=today();
-    l.lastUpdatedAt=nowDateTime();
+    l.lastUpdated=today();l.lastUpdatedAt=nowDateTime();
     return l;
-  }));
+  });
   saveLocalBackup(leads);
   render();
   saveLeads(leads).catch(function(){alert("המשימה נשמרה מקומית, אבל לא הסתנכרנה לענן.");});
@@ -1186,10 +945,7 @@ function escapeICS(v){
     .replace(/;/g,"\\;");
 }
 function downloadICS(title,description,date,time){
-  if(!date){
-    alert("כדי להוסיף ליומן צריך להגדיר תאריך יעד במשימה עצמה.");
-    return;
-  }
+  if(!date){alert("כדי להוסיף ליומן צריך להגדיר תאריך יעד למשימה.");return;}
 
   var start=dateTimeForICS(date,time||"09:00");
   var end=addOneHourICS(start);
@@ -1208,9 +964,6 @@ function downloadICS(title,description,date,time){
     +"DTSTART:"+start+"\n"
     +"DTEND:"+end+"\n"
     +"DTSTAMP:"+stamp+"\n"
-    +"TRANSP:TRANSPARENT\n"
-    +"X-MICROSOFT-CDO-BUSYSTATUS:FREE\n"
-    +"STATUS:CONFIRMED\n"
     +"BEGIN:VALARM\n"
     +"TRIGGER:-PT30M\n"
     +"ACTION:DISPLAY\n"
@@ -1233,38 +986,23 @@ function buildTaskCalendarDescription(lead,task){
     +"מייל: "+(lead.email||"")+"\n"
     +"סטטוס ליד: "+(lead.status||"")+"\n"
     +"עדיפות משימה: "+(task.priority||"")+"\n"
-    +"אחראי: "+(task.owner||"")+"\n"+"סוג: תזכורת ביומן, מוגדר כ-Free/לא חוסם זמן";
+    +"אחראי: "+(task.owner||"");
 }
 function addTaskToCalendar(leadId,taskId){
   var lead=leads.find(function(l){return String(l.id)===String(leadId);});
   if(!lead)return;
   lead=normalizeLead(lead);
-  var task=(lead.tasks||[]).find(function(t){return String(t.id)===String(taskId)&&String((t.leadId||lead.id))===String(lead.id);});
+  var task=(lead.tasks||[]).find(function(t){return String(t.id)===String(taskId);});
   if(!task)return;
   task=normalizeTask(task,lead);
-
-  if(!task.dueDate){
-    alert("למשימה הזו אין תאריך יעד. פתח את הליד והגדר תאריך למשימה.");
-    return;
-  }
-
   downloadICS("משימה: "+task.title+" - "+lead.company,buildTaskCalendarDescription(lead,task),task.dueDate,task.dueTime||"09:00");
 }
 function addCurrentLeadTaskToCalendar(taskId){
   if(!currentLead)return;
-  currentLead=buildLeadFromForm();
   currentLead=normalizeLead(currentLead);
-  var task=(currentLead.tasks||[]).find(function(t){
-    return String(t.id)===String(taskId)&&String((t.leadId||currentLead.id))===String(currentLead.id);
-  });
+  var task=(currentLead.tasks||[]).find(function(t){return String(t.id)===String(taskId);});
   if(!task)return;
   task=normalizeTask(task,currentLead);
-
-  if(!task.dueDate){
-    alert("למשימה הזו אין תאריך יעד. הגדר תאריך במשימה ואז נסה שוב.");
-    return;
-  }
-
   downloadICS("משימה: "+task.title+" - "+currentLead.company,buildTaskCalendarDescription(currentLead,task),task.dueDate,task.dueTime||"09:00");
 }
 
@@ -1290,12 +1028,12 @@ function renderTasksBoard(){
     +'<span style="font-weight:900;color:#42526e">סינון משימות:</span>'
     +'<select onchange="taskOwnerFilter=this.value;render()">'
       +'<option'+(taskOwnerFilter==="הכל"?' selected':'')+'>הכל</option>'
-      +OWNERS.map(function(o){return '<option'+(taskOwnerFilter===o?' selected':'')+'>'+esc(o)+'</option>';}).join("")
+      +OWNERS.map(function(o){return '<option'+(taskOwnerFilter===o?' selected':'')+'>'+o+'</option>';}).join("")
     +'</select>'
     +'<select onchange="taskStatusQuickFilter=this.value;render()">'
-      +["הכל","פתוחות","באיחור","להיום","גבוהה"].map(function(v){return '<option'+(taskStatusQuickFilter===v?' selected':'')+'>'+esc(v)+'</option>';}).join("")
+      +["הכל","פתוחות","באיחור","להיום","גבוהה"].map(function(v){return '<option'+(taskStatusQuickFilter===v?' selected':'')+'>'+v+'</option>';}).join("")
     +'</select>'
-    +'<button type="button" onclick="resetTaskFilters()">נקה סינון</button>'
+    +'<button onclick="resetTaskFilters()">נקה סינון</button>'
     +'</div>';
 
   var summary='<div class="tasks-summary">'
@@ -1313,28 +1051,24 @@ function renderTasksBoard(){
       var pb=b.task.priority==="גבוהה"?0:(b.task.priority==="בינונית"?1:2);
       return pa-pb;
     });
-
-    return '<div class="task-col"><div class="task-col-title"><span>'+esc(st)+'</span><span class="task-count">'+items.length+'</span></div>'
+    return '<div class="task-col"><div class="task-col-title"><span>'+st+'</span><span class="task-count">'+items.length+'</span></div>'
       +(items.length?items.map(function(x){
         var t=x.task,l=x.lead,over=isTaskOverdue(t),due=isTaskDue(t);
-        var options=TASK_STATUS_OPTIONS.map(function(s){
-          return '<option value="'+esc(s)+'" '+(t.status===s?'selected':'')+'>'+esc(s)+'</option>';
-        }).join("");
-
         return '<div class="task-card '+(over?'overdue':(due?'today':''))+'">'
           +'<div class="task-title">'+esc(t.title)+'</div>'
-          +'<div class="task-meta">ליד: <a href="#" onclick="event.preventDefault();openEdit('+JSON.stringify(l.id)+')">'+esc(l.company)+'</a><br>אחראי: '+esc(t.owner)+' • עדיפות: '+esc(t.priority)+'<br>'+(t.dueDate?'יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+esc(t.dueTime):'')+'<br>':'')+'סטטוס ליד: '+esc(l.status)+'</div>'
+          +'<div class="task-meta">ליד: <a href="#" onclick="event.preventDefault();openEdit('+JSON.stringify(l.id)+')">'+esc(l.company)+'</a><br>אחראי: '+esc(t.owner)+' • עדיפות: '+esc(t.priority)+'<br>'+(t.dueDate?'יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+t.dueTime:'')+'<br>':'')+'סטטוס ליד: '+esc(l.status)+'</div>'
           +'<div class="task-actions">'
-            +'<select class="task-status-select" onchange="setGlobalTaskStatus('+JSON.stringify(String(l.id))+','+JSON.stringify(String(t.id))+',this.value)">'+options+'</select>'
-            +'<button type="button" class="task-mini-btn calendar" onclick="addTaskToCalendar('+JSON.stringify(String(l.id))+','+JSON.stringify(String(t.id))+')">📅 יומן + התראה</button>'
+          +'<button class="task-mini-btn calendar" onclick="addTaskToCalendar('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+')">📅 יומן</button>'
+          +(st!=="בטיפול"?'<button class="task-mini-btn" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בטיפול\')">בטיפול</button>':'')
+          +(st!=="בוצעה"?'<button class="task-mini-btn done" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בוצעה\')">בוצע</button>':'')
+          +(st!=="נדחתה"?'<button class="task-mini-btn snooze" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'נדחתה\')">נדחה</button>':'')
+          +(st!=="בוטלה"?'<button class="task-mini-btn cancel" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בוטלה\')">בוטל</button>':'')
           +'</div></div>';
       }).join(""):'<div style="font-size:12px;color:#6b778c;padding:8px">אין משימות</div>')
       +'</div>';
   }).join("");
-
   return '<div class="tasks-wrap">'+toolbar+summary+'<div class="task-board">'+board+'</div></div>';
 }
-
 function buildGCalLink(){var company=g("f_company"),date=g("f_meetingDate"),time=g("f_meetingTime")||"09:00",loc=g("f_meetingLocation"),guest=g("f_meetingGuest");if(!date)return null;var p=date.split("-"),tp=time.split(":"),pad=function(n){return String(n).padStart(2,"0");},start=p[0]+p[1]+p[2]+"T"+pad(tp[0])+pad(tp[1]||"00")+"00",endH=String((parseInt(tp[0],10)+1)%24).padStart(2,"0"),end=p[0]+p[1]+p[2]+"T"+endH+pad(tp[1]||"00")+"00";return"https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent("פגישה — "+company)+"&dates="+start+"/"+end+"&location="+encodeURIComponent(loc)+"&add="+encodeURIComponent(guest)+"&sf=true&output=xml";}
 function openGCal(){var link=buildGCalLink();if(!link){alert("נא להזין תאריך לפגישה");return;}window.open(link,"_blank");}
 function buildICS(){var company=g("f_company")||"פגישה",date=g("f_meetingDate"),time=g("f_meetingTime")||"09:00",loc=g("f_meetingLocation"),guest=g("f_meetingGuest");if(!date){alert("נא להזין תאריך לפגישה");return;}var p=date.split("-"),tp=time.split(":"),pad=function(n){return String(n).padStart(2,"0");},start=p[0]+p[1]+p[2]+"T"+pad(tp[0])+pad(tp[1]||"00")+"00",endH=String((parseInt(tp[0],10)+1)%24).padStart(2,"0"),end=p[0]+p[1]+p[2]+"T"+endH+pad(tp[1]||"00")+"00",att=guest?"ATTENDEE;RSVP=TRUE:mailto:"+guest+"\n":"",ics="BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nUID:"+Date.now()+"@leads\nSUMMARY:פגישה — "+company+"\nDTSTART:"+start+"\nDTEND:"+end+"\nLOCATION:"+loc+"\n"+att+"END:VEVENT\nEND:VCALENDAR",blob=new Blob([ics],{type:"text/calendar"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="פגישה-"+company+".ics";a.click();}
