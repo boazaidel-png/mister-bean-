@@ -240,6 +240,35 @@ input[type="time"],
   .brand-text p{font-size:11px!important}
 }
 
+
+/* v46 stable task controls */
+.task-status-select{
+  border:1px solid #dfe1e6;
+  background:#fff;
+  border-radius:6px;
+  padding:5px 7px;
+  font-size:11px;
+  font-weight:800;
+  color:#172b4d;
+  font-family:inherit;
+  min-width:92px;
+  pointer-events:auto!important;
+}
+.task-actions,
+.lead-task-actions{
+  position:relative;
+  z-index:20;
+}
+.task-mini-btn,
+.task-status-select{
+  cursor:pointer;
+  touch-action:manipulation;
+}
+html,body{
+  overflow-y:auto!important;
+  scroll-behavior:auto!important;
+}
+
 </style>
 
 <link rel="icon" type="image/png" href="icon-192.png">
@@ -554,11 +583,22 @@ function repairTaskLinks(){
 }
 
 function init(){
-  if(initStarted)return;initStarted=true;
-  fbRead().then(function(d){leads=normalizeLeadsList((d&&Array.isArray(d))?d:(loadLocalBackup()||[]));saveLocalBackup(leads);lastSync=new Date();syncStatus="ok";repairTaskLinks();processFutureLeads();render();}).catch(function(){leads=normalizeLeadsList(loadLocalBackup()||[]);syncStatus="error";repairTaskLinks();processFutureLeads();render();});
-  setInterval(function(){var modalOpen=document.getElementById("modal-wrap")&&document.getElementById("modal-wrap").classList.contains("open");var active=document.activeElement;var typing=active&&["INPUT","TEXTAREA","SELECT"].indexOf(active.tagName)>=0;if(modalOpen||typing)return;fbRead().then(function(d){if(d&&Array.isArray(d)){leads=normalizeLeadsList(d);saveLocalBackup(leads);lastSync=new Date();syncStatus="ok";repairTaskLinks();processFutureLeads();render();}}).catch(function(){syncStatus="error";updateBadge();});},15000);
+  if(initStarted)return;
+  initStarted=true;
+  fbRead().then(function(d){
+    leads=normalizeLeadsList((d&&Array.isArray(d))?d:(loadLocalBackup()||[]));
+    saveLocalBackup(leads);
+    lastSync=new Date();
+    syncStatus="ok";
+    processFutureLeads();
+    render();
+  }).catch(function(){
+    leads=normalizeLeadsList(loadLocalBackup()||[]);
+    syncStatus="error";
+    processFutureLeads();
+    render();
+  });
 }
-
 function isTodayWorkLead(l){
   l=normalizeLead(l);
   return isActiveProcessLead(l) && (isDue(l.followUpDate) || l.priority==="גבוהה");
@@ -957,33 +997,92 @@ function persistCurrentLeadSilently(){
   });
 }
 
+
+function setCurrentLeadTaskStatus(taskId,status){
+  if(!currentLead)return;
+  currentLead=buildLeadFromForm();
+  currentLead=normalizeLead(currentLead);
+  var found=false;
+  currentLead.tasks=(currentLead.tasks||[]).map(function(t){
+    t=normalizeTask(t,currentLead);
+    if(String(t.id)!==String(taskId))return t;
+    found=true;
+    return Object.assign({},t,{
+      status:status,
+      leadId:String(currentLead.id),
+      updatedAt:today(),
+      completedAt:status==="בוצעה"?today():(t.completedAt||"")
+    });
+  });
+  if(!found){alert("המשימה לא נמצאה בליד הזה.");return;}
+  currentLead.lastUpdated=today();
+  currentLead.lastUpdatedAt=nowDateTime();
+  renderLeadTasks();
+  persistCurrentLeadSilently();
+}
+
+function setGlobalTaskStatus(leadId,taskId,status){
+  var found=false;
+  leads=normalizeLeadsList(leads.map(function(l){
+    if(String(l.id)!==String(leadId))return l;
+    l=normalizeLead(l);
+    l.tasks=(l.tasks||[]).map(function(t){
+      t=normalizeTask(t,l);
+      if(String(t.id)!==String(taskId))return t;
+      found=true;
+      return Object.assign({},t,{
+        status:status,
+        leadId:String(l.id),
+        updatedAt:today(),
+        completedAt:status==="בוצעה"?today():(t.completedAt||"")
+      });
+    });
+    if(found){
+      l.lastUpdated=today();
+      l.lastUpdatedAt=nowDateTime();
+    }
+    return l;
+  }));
+  if(!found){alert("המשימה לא נמצאה.");return;}
+  saveLocalBackup(leads);
+  render();
+  saveLeads(leads).catch(function(){
+    alert("המשימה נשמרה מקומית, אבל לא הסתנכרנה לענן.");
+  });
+}
+
 function renderLeadTasks(){
   var box=document.getElementById("lead-tasks-list");
   if(!box||!currentLead)return;
   currentLead=normalizeLead(currentLead);
-  var tasks=(currentLead.tasks||[]).filter(function(t){return String((t.leadId||currentLead.id))===String(currentLead.id);});
+  var tasks=(currentLead.tasks||[]).filter(function(t){
+    return String((t.leadId||currentLead.id))===String(currentLead.id);
+  });
+
   if(!tasks.length){
     box.innerHTML='<div style="font-size:12px;color:#6b778c">אין משימות לליד הזה.</div>';
-  }else{
-    box.innerHTML=tasks.slice().sort(function(a,b){
-      var ad=a.dueDate||"9999-12-31",bd=b.dueDate||"9999-12-31";
-      if(ad!==bd)return ad>bd?1:-1;
-      return a.status>b.status?1:-1;
-    }).map(function(t){
-      var due=isTaskDue(t),over=isTaskOverdue(t);
-      return '<div class="lead-task-row" style="'+(over?'background:#ffebe6;padding-right:6px;border-radius:6px':(due?'background:#fff7d6;padding-right:6px;border-radius:6px':''))+'">'
-        +'<div class="lead-task-main"><strong>'+esc(t.title)+'</strong><br><span>'+esc(t.status)+' • '+esc(t.priority)+' • '+esc(t.owner)+(t.dueDate?' • יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+t.dueTime:''):'')+'</span></div>'
-        +'<div class="lead-task-actions">'
-        +'<button class="task-mini-btn" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בטיפול\')">בטיפול</button>'
-        +'<button class="task-mini-btn calendar" onclick="addCurrentLeadTaskToCalendar('+JSON.stringify(t.id)+')">📅 יומן + התראה</button>'
-        +'<button class="task-mini-btn done" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בוצעה\')">בוצע</button>'
-        +'<button class="task-mini-btn snooze" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'נדחתה\')">נדחה</button>'
-        +'<button class="task-mini-btn cancel" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בוטלה\')">בוטל</button>'
-        +'</div></div>';
-    }).join("");
+    return;
   }
-  var owner=document.getElementById("task_owner");
-  if(owner)owner.value=currentLead.owner||"בועז";
+
+  box.innerHTML=tasks.slice().sort(function(a,b){
+    var ad=a.dueDate||"9999-12-31",bd=b.dueDate||"9999-12-31";
+    if(ad!==bd)return ad>bd?1:-1;
+    return String(a.status||"").localeCompare(String(b.status||""),"he");
+  }).map(function(t){
+    t=normalizeTask(t,currentLead);
+    var due=isTaskDue(t),over=isTaskOverdue(t);
+    var rowStyle=over?'background:#ffebe6;padding-right:6px;border-radius:6px':(due?'background:#fff7d6;padding-right:6px;border-radius:6px':'');
+    var options=TASK_STATUS_OPTIONS.map(function(s){
+      return '<option value="'+esc(s)+'" '+(t.status===s?'selected':'')+'>'+esc(s)+'</option>';
+    }).join("");
+
+    return '<div class="lead-task-row" style="'+rowStyle+'">'
+      +'<div class="lead-task-main"><strong>'+esc(t.title)+'</strong><br><span>עדיפות: '+esc(t.priority)+' • אחראי: '+esc(t.owner)+(t.dueDate?' • יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+esc(t.dueTime):''):'')+'</span></div>'
+      +'<div class="lead-task-actions">'
+        +'<select class="task-status-select" onchange="setCurrentLeadTaskStatus('+JSON.stringify(String(t.id))+',this.value)">'+options+'</select>'
+        +'<button type="button" class="task-mini-btn calendar" onclick="addCurrentLeadTaskToCalendar('+JSON.stringify(String(t.id))+')">📅 יומן + התראה</button>'
+      +'</div></div>';
+  }).join("");
 }
 function addTaskToCurrentLead(){
   if(!currentLead)return;
@@ -1191,12 +1290,12 @@ function renderTasksBoard(){
     +'<span style="font-weight:900;color:#42526e">סינון משימות:</span>'
     +'<select onchange="taskOwnerFilter=this.value;render()">'
       +'<option'+(taskOwnerFilter==="הכל"?' selected':'')+'>הכל</option>'
-      +OWNERS.map(function(o){return '<option'+(taskOwnerFilter===o?' selected':'')+'>'+o+'</option>';}).join("")
+      +OWNERS.map(function(o){return '<option'+(taskOwnerFilter===o?' selected':'')+'>'+esc(o)+'</option>';}).join("")
     +'</select>'
     +'<select onchange="taskStatusQuickFilter=this.value;render()">'
-      +["הכל","פתוחות","באיחור","להיום","גבוהה"].map(function(v){return '<option'+(taskStatusQuickFilter===v?' selected':'')+'>'+v+'</option>';}).join("")
+      +["הכל","פתוחות","באיחור","להיום","גבוהה"].map(function(v){return '<option'+(taskStatusQuickFilter===v?' selected':'')+'>'+esc(v)+'</option>';}).join("")
     +'</select>'
-    +'<button onclick="resetTaskFilters()">נקה סינון</button>'
+    +'<button type="button" onclick="resetTaskFilters()">נקה סינון</button>'
     +'</div>';
 
   var summary='<div class="tasks-summary">'
@@ -1214,24 +1313,28 @@ function renderTasksBoard(){
       var pb=b.task.priority==="גבוהה"?0:(b.task.priority==="בינונית"?1:2);
       return pa-pb;
     });
-    return '<div class="task-col"><div class="task-col-title"><span>'+st+'</span><span class="task-count">'+items.length+'</span></div>'
+
+    return '<div class="task-col"><div class="task-col-title"><span>'+esc(st)+'</span><span class="task-count">'+items.length+'</span></div>'
       +(items.length?items.map(function(x){
         var t=x.task,l=x.lead,over=isTaskOverdue(t),due=isTaskDue(t);
+        var options=TASK_STATUS_OPTIONS.map(function(s){
+          return '<option value="'+esc(s)+'" '+(t.status===s?'selected':'')+'>'+esc(s)+'</option>';
+        }).join("");
+
         return '<div class="task-card '+(over?'overdue':(due?'today':''))+'">'
           +'<div class="task-title">'+esc(t.title)+'</div>'
-          +'<div class="task-meta">ליד: <a href="#" onclick="event.preventDefault();openEdit('+JSON.stringify(l.id)+')">'+esc(l.company)+'</a><br>אחראי: '+esc(t.owner)+' • עדיפות: '+esc(t.priority)+'<br>'+(t.dueDate?'יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+t.dueTime:'')+'<br>':'')+'סטטוס ליד: '+esc(l.status)+'</div>'
+          +'<div class="task-meta">ליד: <a href="#" onclick="event.preventDefault();openEdit('+JSON.stringify(l.id)+')">'+esc(l.company)+'</a><br>אחראי: '+esc(t.owner)+' • עדיפות: '+esc(t.priority)+'<br>'+(t.dueDate?'יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+esc(t.dueTime):'')+'<br>':'')+'סטטוס ליד: '+esc(l.status)+'</div>'
           +'<div class="task-actions">'
-          +'<button class="task-mini-btn calendar" onclick="addTaskToCalendar('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+')">📅 יומן + התראה</button>'
-          +(st!=="בטיפול"?'<button class="task-mini-btn" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בטיפול\')">בטיפול</button>':'')
-          +(st!=="בוצעה"?'<button class="task-mini-btn done" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בוצעה\')">בוצע</button>':'')
-          +(st!=="נדחתה"?'<button class="task-mini-btn snooze" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'נדחתה\')">נדחה</button>':'')
-          +(st!=="בוטלה"?'<button class="task-mini-btn cancel" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בוטלה\')">בוטל</button>':'')
+            +'<select class="task-status-select" onchange="setGlobalTaskStatus('+JSON.stringify(String(l.id))+','+JSON.stringify(String(t.id))+',this.value)">'+options+'</select>'
+            +'<button type="button" class="task-mini-btn calendar" onclick="addTaskToCalendar('+JSON.stringify(String(l.id))+','+JSON.stringify(String(t.id))+')">📅 יומן + התראה</button>'
           +'</div></div>';
       }).join(""):'<div style="font-size:12px;color:#6b778c;padding:8px">אין משימות</div>')
       +'</div>';
   }).join("");
+
   return '<div class="tasks-wrap">'+toolbar+summary+'<div class="task-board">'+board+'</div></div>';
 }
+
 function buildGCalLink(){var company=g("f_company"),date=g("f_meetingDate"),time=g("f_meetingTime")||"09:00",loc=g("f_meetingLocation"),guest=g("f_meetingGuest");if(!date)return null;var p=date.split("-"),tp=time.split(":"),pad=function(n){return String(n).padStart(2,"0");},start=p[0]+p[1]+p[2]+"T"+pad(tp[0])+pad(tp[1]||"00")+"00",endH=String((parseInt(tp[0],10)+1)%24).padStart(2,"0"),end=p[0]+p[1]+p[2]+"T"+endH+pad(tp[1]||"00")+"00";return"https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent("פגישה — "+company)+"&dates="+start+"/"+end+"&location="+encodeURIComponent(loc)+"&add="+encodeURIComponent(guest)+"&sf=true&output=xml";}
 function openGCal(){var link=buildGCalLink();if(!link){alert("נא להזין תאריך לפגישה");return;}window.open(link,"_blank");}
 function buildICS(){var company=g("f_company")||"פגישה",date=g("f_meetingDate"),time=g("f_meetingTime")||"09:00",loc=g("f_meetingLocation"),guest=g("f_meetingGuest");if(!date){alert("נא להזין תאריך לפגישה");return;}var p=date.split("-"),tp=time.split(":"),pad=function(n){return String(n).padStart(2,"0");},start=p[0]+p[1]+p[2]+"T"+pad(tp[0])+pad(tp[1]||"00")+"00",endH=String((parseInt(tp[0],10)+1)%24).padStart(2,"0"),end=p[0]+p[1]+p[2]+"T"+endH+pad(tp[1]||"00")+"00",att=guest?"ATTENDEE;RSVP=TRUE:mailto:"+guest+"\n":"",ics="BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nUID:"+Date.now()+"@leads\nSUMMARY:פגישה — "+company+"\nDTSTART:"+start+"\nDTEND:"+end+"\nLOCATION:"+loc+"\n"+att+"END:VEVENT\nEND:VCALENDAR",blob=new Blob([ics],{type:"text/calendar"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="פגישה-"+company+".ics";a.click();}
