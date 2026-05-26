@@ -240,6 +240,45 @@ input[type="time"],
   .brand-text p{font-size:11px!important}
 }
 
+
+/* Calendar task button click fix */
+.add-calendar-btn{
+  pointer-events:auto!important;
+  cursor:pointer!important;
+  touch-action:manipulation;
+}
+.add-calendar-btn *{pointer-events:none}
+
+
+/* Stable scroll and task button click behavior */
+html,body{
+  min-height:100%;
+  overflow-y:auto;
+  overscroll-behavior-y:auto;
+}
+.task-mini-btn,
+.task-action-btn,
+.add-calendar-btn{
+  pointer-events:auto!important;
+  cursor:pointer!important;
+  touch-action:manipulation;
+  position:relative;
+  z-index:5;
+}
+.task-mini-btn *,.task-action-btn *,.add-calendar-btn *{pointer-events:none}
+#modal-wrap.open{
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.modal{
+  max-height:92dvh;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+body.modal-open{
+  overflow:hidden;
+}
+
 </style>
 
 <link rel="icon" href="favicon-v39.ico" sizes="any">
@@ -361,6 +400,7 @@ var OLD_STATUS_MAP={"ממתין לחיבור":"בהמתנה לפרטים","נש�
 var PRIORITY_OPTIONS=["נמוכה","בינונית","גבוהה"];
 var OWNERS=["בועז","בר","בועז/בר","אחר"];
 var TASK_STATUS_OPTIONS=["פתוחה","בטיפול","נדחתה","בוצעה","בוטלה"];
+var shouldKeepActiveTabVisible=false;
 var leads=[],activeTab="לידים בתהליך",filterStatus="הכל",filterOwner="הכל",search="",sortKey="followUpDate",sortDir="asc",syncStatus="idle",lastSync=null,currentLead=null,isAdding=false,statFilter=null,searchTimer=null,keepSearchFocus=false,keepSearchSelectionStart=0,keepSearchSelectionEnd=0,keepWindowScrollY=0,taskOwnerFilter="הכל",taskStatusQuickFilter="הכל",customTabOrder=null;
 
 function getAuthToken(){
@@ -698,6 +738,9 @@ function saveTabOrder(order){
 
 
 function keepActiveTabVisible(){
+  if(!shouldKeepActiveTabVisible)return;
+  shouldKeepActiveTabVisible=false;
+
   var wrap=document.querySelector(".tabs");
   if(!wrap)return;
   var active=wrap.querySelector(".tab.active");
@@ -705,14 +748,13 @@ function keepActiveTabVisible(){
 
   setTimeout(function(){
     try{
-      active.scrollIntoView({behavior:"auto",block:"nearest",inline:"center"});
-    }catch(e){
-      var target=active.offsetLeft-(wrap.clientWidth/2)+(active.clientWidth/2);
-      wrap.scrollLeft=target;
-    }
+      var wrapRect=wrap.getBoundingClientRect();
+      var activeRect=active.getBoundingClientRect();
+      var delta=(activeRect.left+activeRect.width/2)-(wrapRect.left+wrapRect.width/2);
+      wrap.scrollLeft+=delta;
+    }catch(e){}
   },0);
 }
-
 function render(){
   preserveSearchFocusBeforeRender();
   processFutureLeads();
@@ -821,7 +863,7 @@ function render(){
   keepActiveTabVisible();
   
 }
-function setTab(t){activeTab=t;statFilter=null;render();}function setFilterStatus(v){filterStatus=v;render();}function setFilterOwner(v){filterOwner=v;render();}function setSort(k){if(sortKey===k)sortDir=sortDir==="asc"?"desc":"asc";else{sortKey=k;sortDir="asc";}render();}function dashboardFilterClick(f){
+function setTab(t){shouldKeepActiveTabVisible=true;activeTab=t;statFilter=null;render();}function setFilterStatus(v){filterStatus=v;render();}function setFilterOwner(v){filterOwner=v;render();}function setSort(k){if(sortKey===k)sortDir=sortDir==="asc"?"desc":"asc";else{sortKey=k;sortDir="asc";}render();}function dashboardFilterClick(f){
   statFilter=null;
 
   if(f==="__משימות"){activeTab="משימות";
@@ -884,30 +926,10 @@ function populateSelects(){
 }
 function updateMeetingSection(){var s=document.getElementById("f_status"),sec=document.getElementById("meeting-section");if(!s||!sec)return;sec.style.display=s.value==="נקבעה פגישה"?"block":"none";}
 function g(id){return(document.getElementById(id)||{}).value||"";}
-function openModalUI(){var w=document.getElementById("modal-wrap");if(!w)return;w.classList.add("open");document.body.classList.add("modal-open");document.body.style.overflow="hidden";}
+function openModalUI(){var w=document.getElementById("modal-wrap");if(!w)return;w.classList.add("open");document.body.classList.add("modal-open");}
 function closeModal(){var w=document.getElementById("modal-wrap");if(w)w.classList.remove("open");document.body.classList.remove("modal-open");document.body.style.overflow="";currentLead=null;isAdding=false;var b=document.querySelector(".btn-save");if(b){b.disabled=false;b.textContent="💾 שמור";}}
 function setForm(l){
-  
-document.addEventListener("click",function(e){
-  var btn=e.target.closest(".add-calendar-btn");
-  if(!btn)return;
-  e.preventDefault();
-  e.stopPropagation();
-
-  var taskId=btn.getAttribute("data-task-id");
-  if(btn.getAttribute("data-current-lead")==="1"){
-    addCurrentLeadTaskToCalendar(taskId);
-    return;
-  }
-
-  var leadId=btn.getAttribute("data-lead-id");
-  if(leadId&&taskId){
-    addTaskToCalendar(leadId,taskId);
-  }
-});
-
-populateSelects();
-  var title=document.getElementById("modal-title-text");
+    var title=document.getElementById("modal-title-text");
   if(title) title.textContent=l.company||"ליד חדש";
   ["company","employees","location","connection","contact","role","phone","email","owner","priority","status","followUpDate","hasContract","supplier","machineType","machineCount","monthlyConsumption","pricePerKg","notes","meetingDate","meetingTime","meetingLocation","meetingGuest"].forEach(function(k){
     var el=document.getElementById("f_"+k);
@@ -995,11 +1017,11 @@ function renderLeadTasks(){
       return '<div class="lead-task-row" style="'+(over?'background:#ffebe6;padding-right:6px;border-radius:6px':(due?'background:#fff7d6;padding-right:6px;border-radius:6px':''))+'">'
         +'<div class="lead-task-main"><strong>'+esc(t.title)+'</strong><br><span>'+esc(t.status)+' • '+esc(t.priority)+' • '+esc(t.owner)+(t.dueDate?' • יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+t.dueTime:''):'')+'</span></div>'
         +'<div class="lead-task-actions">'
-        +'<button class="task-mini-btn" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בטיפול\')">בטיפול</button>'
+        +'<button type="button" class="task-mini-btn task-action-btn" data-current-lead="1" data-task-id="'+esc(t.id)+'" data-status="בטיפול">בטיפול</button>'
         +'<button type="button" class="task-mini-btn calendar add-calendar-btn" data-current-lead="1" data-task-id="'+esc(t.id)+'">📅 יומן + התראה</button>'
-        +'<button class="task-mini-btn done" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בוצעה\')">בוצע</button>'
-        +'<button class="task-mini-btn snooze" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'נדחתה\')">נדחה</button>'
-        +'<button class="task-mini-btn cancel" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בוטלה\')">בוטל</button>'
+        +'<button type="button" class="task-mini-btn done task-action-btn" data-current-lead="1" data-task-id="'+esc(t.id)+'" data-status="בוצעה">בוצע</button>'
+        +'<button type="button" class="task-mini-btn snooze task-action-btn" data-current-lead="1" data-task-id="'+esc(t.id)+'" data-status="נדחתה">נדחה</button>'
+        +'<button type="button" class="task-mini-btn cancel task-action-btn" data-current-lead="1" data-task-id="'+esc(t.id)+'" data-status="בוטלה">בוטל</button>'
         +'</div></div>';
     }).join("");
   }
@@ -1243,10 +1265,10 @@ function renderTasksBoard(){
           +'<div class="task-meta">ליד: <a href="#" onclick="event.preventDefault();openEdit('+JSON.stringify(l.id)+')">'+esc(l.company)+'</a><br>אחראי: '+esc(t.owner)+' • עדיפות: '+esc(t.priority)+'<br>'+(t.dueDate?'יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+t.dueTime:'')+'<br>':'')+'סטטוס ליד: '+esc(l.status)+'</div>'
           +'<div class="task-actions">'
           +'<button type="button" class="task-mini-btn calendar add-calendar-btn" data-lead-id="'+esc(l.id)+'" data-task-id="'+esc(t.id)+'">📅 יומן + התראה</button>'
-          +(st!=="בטיפול"?'<button class="task-mini-btn" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בטיפול\')">בטיפול</button>':'')
-          +(st!=="בוצעה"?'<button class="task-mini-btn done" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בוצעה\')">בוצע</button>':'')
-          +(st!=="נדחתה"?'<button class="task-mini-btn snooze" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'נדחתה\')">נדחה</button>':'')
-          +(st!=="בוטלה"?'<button class="task-mini-btn cancel" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בוטלה\')">בוטל</button>':'')
+          +(st!=="בטיפול"?'<button type="button" class="task-mini-btn task-action-btn" data-lead-id="'+esc(l.id)+'" data-task-id="'+esc(t.id)+'" data-status="בטיפול">בטיפול</button>':'')
+          +(st!=="בוצעה"?'<button type="button" class="task-mini-btn done task-action-btn" data-lead-id="'+esc(l.id)+'" data-task-id="'+esc(t.id)+'" data-status="בוצעה">בוצע</button>':'')
+          +(st!=="נדחתה"?'<button type="button" class="task-mini-btn snooze task-action-btn" data-lead-id="'+esc(l.id)+'" data-task-id="'+esc(t.id)+'" data-status="נדחתה">נדחה</button>':'')
+          +(st!=="בוטלה"?'<button type="button" class="task-mini-btn cancel task-action-btn" data-lead-id="'+esc(l.id)+'" data-task-id="'+esc(t.id)+'" data-status="בוטלה">בוטל</button>':'')
           +'</div></div>';
       }).join(""):'<div style="font-size:12px;color:#6b778c;padding:8px">אין משימות</div>')
       +'</div>';
@@ -1295,6 +1317,66 @@ document.addEventListener("click",function(e){
   }
 });
 
+
+
+
+/* Stable task action button delegation */
+document.addEventListener("click",function(e){
+  var actionBtn=e.target.closest(".task-action-btn");
+  if(!actionBtn)return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  var taskId=actionBtn.getAttribute("data-task-id");
+  var status=actionBtn.getAttribute("data-status");
+
+  if(!taskId || !status){
+    alert("לא נמצא מזהה משימה או סטטוס לעדכון.");
+    return;
+  }
+
+  if(actionBtn.getAttribute("data-current-lead")==="1"){
+    updateTaskInCurrentLead(taskId,status);
+    return;
+  }
+
+  var leadId=actionBtn.getAttribute("data-lead-id");
+  if(!leadId){
+    alert("לא נמצא מזהה ליד למשימה.");
+    return;
+  }
+
+  updateTaskGlobal(leadId,taskId,status);
+},true);
+
+/* Stable calendar button delegation */
+document.addEventListener("click",function(e){
+  var btn=e.target.closest(".add-calendar-btn");
+  if(!btn)return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  var taskId=btn.getAttribute("data-task-id");
+  if(!taskId){
+    alert("לא נמצא מזהה משימה.");
+    return;
+  }
+
+  if(btn.getAttribute("data-current-lead")==="1"){
+    addCurrentLeadTaskToCalendar(taskId);
+    return;
+  }
+
+  var leadId=btn.getAttribute("data-lead-id");
+  if(!leadId){
+    alert("לא נמצא מזהה ליד למשימה.");
+    return;
+  }
+
+  addTaskToCalendar(leadId,taskId);
+},true);
 
 populateSelects();
 if(auth){
