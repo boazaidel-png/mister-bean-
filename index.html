@@ -242,9 +242,10 @@ input[type="time"],
 
 </style>
 
-<link rel="icon" type="image/png" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-512.png">
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon-v39.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192-v39.png">
+<link rel="apple-touch-icon" href="icon-512-v39.png">
+<link rel="manifest" href="manifest-v39.webmanifest">
 <meta name="theme-color" content="#0C4CA3">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Mister Bean">
@@ -886,7 +887,26 @@ function g(id){return(document.getElementById(id)||{}).value||"";}
 function openModalUI(){var w=document.getElementById("modal-wrap");if(!w)return;w.classList.add("open");document.body.classList.add("modal-open");document.body.style.overflow="hidden";}
 function closeModal(){var w=document.getElementById("modal-wrap");if(w)w.classList.remove("open");document.body.classList.remove("modal-open");document.body.style.overflow="";currentLead=null;isAdding=false;var b=document.querySelector(".btn-save");if(b){b.disabled=false;b.textContent="💾 שמור";}}
 function setForm(l){
-  populateSelects();
+  
+document.addEventListener("click",function(e){
+  var btn=e.target.closest(".add-calendar-btn");
+  if(!btn)return;
+  e.preventDefault();
+  e.stopPropagation();
+
+  var taskId=btn.getAttribute("data-task-id");
+  if(btn.getAttribute("data-current-lead")==="1"){
+    addCurrentLeadTaskToCalendar(taskId);
+    return;
+  }
+
+  var leadId=btn.getAttribute("data-lead-id");
+  if(leadId&&taskId){
+    addTaskToCalendar(leadId,taskId);
+  }
+});
+
+populateSelects();
   var title=document.getElementById("modal-title-text");
   if(title) title.textContent=l.company||"ליד חדש";
   ["company","employees","location","connection","contact","role","phone","email","owner","priority","status","followUpDate","hasContract","supplier","machineType","machineCount","monthlyConsumption","pricePerKg","notes","meetingDate","meetingTime","meetingLocation","meetingGuest"].forEach(function(k){
@@ -976,7 +996,7 @@ function renderLeadTasks(){
         +'<div class="lead-task-main"><strong>'+esc(t.title)+'</strong><br><span>'+esc(t.status)+' • '+esc(t.priority)+' • '+esc(t.owner)+(t.dueDate?' • יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+t.dueTime:''):'')+'</span></div>'
         +'<div class="lead-task-actions">'
         +'<button class="task-mini-btn" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בטיפול\')">בטיפול</button>'
-        +'<button class="task-mini-btn calendar" onclick="addCurrentLeadTaskToCalendar('+JSON.stringify(t.id)+')">📅 יומן + התראה</button>'
+        +'<button type="button" class="task-mini-btn calendar add-calendar-btn" data-current-lead="1" data-task-id="'+esc(t.id)+'">📅 יומן + התראה</button>'
         +'<button class="task-mini-btn done" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בוצעה\')">בוצע</button>'
         +'<button class="task-mini-btn snooze" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'נדחתה\')">נדחה</button>'
         +'<button class="task-mini-btn cancel" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בוטלה\')">בוטל</button>'
@@ -1222,7 +1242,7 @@ function renderTasksBoard(){
           +'<div class="task-title">'+esc(t.title)+'</div>'
           +'<div class="task-meta">ליד: <a href="#" onclick="event.preventDefault();openEdit('+JSON.stringify(l.id)+')">'+esc(l.company)+'</a><br>אחראי: '+esc(t.owner)+' • עדיפות: '+esc(t.priority)+'<br>'+(t.dueDate?'יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+t.dueTime:'')+'<br>':'')+'סטטוס ליד: '+esc(l.status)+'</div>'
           +'<div class="task-actions">'
-          +'<button class="task-mini-btn calendar" onclick="addTaskToCalendar('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+')">📅 יומן + התראה</button>'
+          +'<button type="button" class="task-mini-btn calendar add-calendar-btn" data-lead-id="'+esc(l.id)+'" data-task-id="'+esc(t.id)+'">📅 יומן + התראה</button>'
           +(st!=="בטיפול"?'<button class="task-mini-btn" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בטיפול\')">בטיפול</button>':'')
           +(st!=="בוצעה"?'<button class="task-mini-btn done" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בוצעה\')">בוצע</button>':'')
           +(st!=="נדחתה"?'<button class="task-mini-btn snooze" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'נדחתה\')">נדחה</button>':'')
