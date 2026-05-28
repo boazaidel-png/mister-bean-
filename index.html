@@ -54,76 +54,6 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
 
 .stat-card,.tab,.card,.tr-clickable{pointer-events:auto;cursor:pointer}
 
-/* Tasks board */
-.tasks-wrap{margin:0 14px 28px}
-.task-board{display:grid;grid-template-columns:repeat(5,minmax(220px,1fr));gap:12px;align-items:start}
-.task-col{background:#ebecf0;border:1px solid #dfe1e6;border-radius:8px;padding:10px;min-height:180px}
-.task-col-title{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:900;color:#172b4d;margin-bottom:10px}
-.task-count{background:#dfe1e6;color:#42526e;border-radius:10px;padding:2px 7px;font-size:11px;font-weight:900}
-.task-card{background:#fff;border:1px solid #dfe1e6;border-radius:8px;padding:10px;margin-bottom:8px;box-shadow:0 1px 1px rgba(9,30,66,.08)}
-.task-card.overdue{background:#ffebe6;border-color:#ffbdad}
-.task-card.today{background:#fff7d6;border-color:#f5cd47}
-.task-title{font-size:13px;font-weight:900;color:#172b4d;margin-bottom:6px}
-.task-meta{font-size:11px;color:#5e6c84;line-height:1.55}
-.task-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
-.task-mini-btn{border:1px solid #dfe1e6;background:#fff;border-radius:5px;padding:5px 7px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;color:#172b4d}
-.task-mini-btn.done{background:#e3fcef;color:#006644;border-color:#abf5d1}
-.task-mini-btn.cancel{background:#ffebe6;color:#de350b;border-color:#ffbdad}
-.task-mini-btn.snooze{background:#fff0b3;color:#7a5d00;border-color:#f5cd47}
-.task-list-in-lead{border:1px solid #dfe1e6;border-radius:8px;background:#fafbfc;padding:10px;margin-top:6px}
-.lead-task-row{display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #ebecf0;padding:8px 0}
-.lead-task-row:last-child{border-bottom:none}
-.lead-task-main{font-size:12px;color:#172b4d;line-height:1.4}.lead-task-main strong{font-weight:900}
-.lead-task-actions{display:flex;gap:5px;flex-wrap:wrap}
-.task-form-grid{display:grid;grid-template-columns:1.4fr .8fr .7fr .8fr .8fr;gap:8px;margin-top:8px}
-.task-form-grid input,.task-form-grid select{border:2px solid #dfe1e6;border-radius:6px;padding:9px 10px;font-size:14px;font-family:inherit;background:#fff}
-.btn-task-add{background:#0052cc;color:#fff;border:none;border-radius:6px;padding:10px 12px;font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;margin-top:8px}
-@media(max-width:900px){.task-board{grid-template-columns:1fr}.task-form-grid{grid-template-columns:1fr}.tasks-wrap{margin-left:10px;margin-right:10px}}
-
-
-
-
-
-.tab-order-controls{
-  display:flex;
-  gap:6px;
-  align-items:center;
-  flex-wrap:wrap;
-  margin:6px 14px 0;
-  font-size:11px;
-  color:#6b778c;
-  font-weight:800;
-}
-.tab-order-controls button{
-  border:1px solid #dfe1e6;
-  background:#fff;
-  color:#0052cc;
-  border-radius:6px;
-  padding:5px 8px;
-  font-size:11px;
-  font-weight:900;
-  cursor:pointer;
-  font-family:inherit;
-}
-.task-mini-btn.calendar{
-  background:#deebff;
-  color:#0747a6;
-  border-color:#b3d4ff;
-}
-@media(max-width:760px){
-  .tab-order-controls{margin-left:10px;margin-right:10px}
-}
-
-
-
-
-
-
-
-
-
-
-
 /* Mobile-stable tabs */
 .tabs{
   overflow-x:auto;
@@ -197,8 +127,6 @@ tr:hover td{background:#deebff!important}tr:nth-child(even) td{background:#fafbf
 input[type="date"],
 input[type="time"],
 #f_lastUpdatedDisplay,
-#task_dueDate,
-#task_dueTime,
 #f_followUpDate,
 #f_meetingDate {
   direction:ltr!important;
@@ -206,7 +134,80 @@ input[type="time"],
   unicode-bidi:plaintext;
 }
 
+
+/* Stable horizontal tab scroll */
+.tabs{
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  touch-action:pan-x pan-y!important;
+  white-space:nowrap!important;
+}
+.tabs .tab{
+  flex:0 0 auto!important;
+  white-space:nowrap!important;
+}
+.table-wrap{
+  overflow-x:auto!important;
+  -webkit-overflow-scrolling:touch!important;
+}
+html,body{
+  overflow-y:auto!important;
+  scroll-behavior:auto!important;
+}
+
+
+/* FINAL scroll stability fix */
+html,
+body{
+  width:100%!important;
+  min-height:100%!important;
+  height:auto!important;
+  overflow-x:auto!important;
+  overflow-y:auto!important;
+  overscroll-behavior-y:auto!important;
+  scroll-behavior:auto!important;
+  -webkit-overflow-scrolling:touch!important;
+}
+
+body.modal-open{
+  overflow-y:auto!important;
+}
+
+#app{
+  min-height:100vh!important;
+  height:auto!important;
+  overflow:visible!important;
+}
+
+.tabs{
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  touch-action:pan-x pan-y!important;
+  white-space:nowrap!important;
+}
+
+.tabs .tab{
+  flex:0 0 auto!important;
+  white-space:nowrap!important;
+}
+
+.table-wrap{
+  overflow-x:auto!important;
+  overflow-y:visible!important;
+  -webkit-overflow-scrolling:touch!important;
+}
+
+.modal-box{
+  overflow-y:auto!important;
+  -webkit-overflow-scrolling:touch!important;
+}
+
 </style>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-512.png">
 </head>
 <body>
 
@@ -253,17 +254,6 @@ input[type="time"],
       <div class="field"><label>מחיר לקילו</label><input id="f_pricePerKg" type="number" inputmode="decimal" step="0.01"></div>
     </div>
     <div class="field"><label>הערות</label><textarea id="f_notes" rows="3"></textarea></div>
-    <div class="section-title">משימות מקושרות</div>
-    <div id="lead-tasks-list" class="task-list-in-lead"></div>
-    <div class="task-form-grid">
-      <input id="task_title" type="text" placeholder="משימה חדשה" autocomplete="off">
-      <input id="task_dueDate" type="date" dir="ltr">
-      <input id="task_dueTime" type="time" dir="ltr">
-      <select id="task_priority"><option>בינונית</option><option>גבוהה</option><option>נמוכה</option></select>
-      <select id="task_owner"></select>
-    </div>
-    <button class="btn-task-add" onclick="addTaskToCurrentLead()">+ הוסף משימה</button>
-
     <div class="field"><label>תאריך עדכון אחרון</label><input type="text" id="f_lastUpdatedDisplay" dir="ltr" readonly style="background:#f4f5f7;color:#5e6c84"></div>
 
     <div id="meeting-section" class="meeting-box" style="display:none">
@@ -407,32 +397,12 @@ function normalizeTask(t,lead){
 function normalizeTasksList(tasks,lead){
   return (Array.isArray(tasks)?tasks:[]).map(function(t){return normalizeTask(t,lead);});
 }
-function getOpenTasks(l){
-  l=normalizeLead(l);
-  return (l.tasks||[]).filter(function(t){return ["בוצעה","בוטלה"].indexOf(t.status)<0;});
-}
-function getNextTask(l){
-  var open=getOpenTasks(l);
-  if(!open.length)return null;
-  return open.slice().sort(function(a,b){
-    var ad=a.dueDate||"9999-12-31",bd=b.dueDate||"9999-12-31";
-    if(ad!==bd)return ad>bd?1:-1;
-    var pa=a.priority==="גבוהה"?0:(a.priority==="בינונית"?1:2);
-    var pb=b.priority==="גבוהה"?0:(b.priority==="בינונית"?1:2);
-    return pa-pb;
-  })[0];
-}
-function getAllTasks(){
-  var out=[];
-  leads.forEach(function(l){
-    l=normalizeLead(l);
-    if(l.deleted)return;
-    (l.tasks||[]).forEach(function(t){
-      out.push({lead:l,task:normalizeTask(t,l)});
-    });
-  });
-  return out;
-}
+function getOpenTasks(l){return [];}
+
+function getNextTask(l){return null;}
+
+function getAllTasks(){return [];}
+
 function isTaskDue(t){
   return !!t.dueDate&&t.dueDate<=today()&&["בוצעה","בוטלה"].indexOf(t.status)<0;
 }
@@ -446,8 +416,7 @@ function isActiveProcessLead(l){
   return !l.deleted
     && l.status!=="לא רלוונטי"
     && l.status!=="נסגר"
-    && l.status!=="לפנייה עתידית"
-    && l.status!=="נשלחה הצעת מחיר";
+    && l.status!=="לפנייה עתידית";
 }
 function processFutureLeads(){
   var changed=false;
@@ -470,7 +439,6 @@ function updateBadge(){var b=document.getElementById("sync-badge");if(!b)return;
 function init(){
   if(initStarted)return;initStarted=true;
   fbRead().then(function(d){leads=normalizeLeadsList((d&&Array.isArray(d))?d:(loadLocalBackup()||[]));saveLocalBackup(leads);lastSync=new Date();syncStatus="ok";processFutureLeads();render();}).catch(function(){leads=normalizeLeadsList(loadLocalBackup()||[]);syncStatus="error";processFutureLeads();render();});
-  setInterval(function(){var modalOpen=document.getElementById("modal-wrap")&&document.getElementById("modal-wrap").classList.contains("open");var active=document.activeElement;var typing=active&&["INPUT","TEXTAREA","SELECT"].indexOf(active.tagName)>=0;if(modalOpen||typing)return;fbRead().then(function(d){if(d&&Array.isArray(d)){leads=normalizeLeadsList(d);saveLocalBackup(leads);lastSync=new Date();syncStatus="ok";processFutureLeads();render();}}).catch(function(){syncStatus="error";updateBadge();});},15000);
 }
 
 function isTodayWorkLead(l){
@@ -538,20 +506,28 @@ function getFiltered(){
   return leads.filter(function(l){
     l=normalizeLead(l);
 
-    if(activeTab==="נמחקו"&&!l.deleted)return false;
-    if(activeTab!=="נמחקו"&&l.deleted)return false;
+    if(activeTab==="נמחקו"){
+      if(!l.deleted)return false;
+    }else{
+      if(l.deleted)return false;
+    }
 
-    if(activeTab==="לטיפול היום"&&!isTodayWorkLead(l))return false;
-    if(activeTab==="לידים בתהליך"&&!isActiveProcessLead(l))return false;
-    if(activeTab==="לא רלוונטי"&&l.status!=="לא רלוונטי")return false;
-    if(activeTab==="נסגר"&&l.status!=="נסגר")return false;
-    if(activeTab==="לפנייה עתידית"&&l.status!=="לפנייה עתידית")return false;
-    if(activeTab==="הצעות"&&l.status!=="נשלחה הצעת מחיר")return false;
-    if(activeTab==="פגישות"&&l.status!=="נקבעה פגישה")return false;
-    if(activeTab==="מתקדם"&&["בהמתנה לקביעת פגישה","נקבעה פגישה","בהמתנה להצעת מחיר","בהמתנה לשליחת הצעה"].indexOf(l.status)<0)return false;
-
-    if(["לא רלוונטי","נסגר","לפנייה עתידית","נמחקו","הצעות"].indexOf(activeTab)<0){
-      if(l.status==="לא רלוונטי"||l.status==="נסגר"||l.status==="לפנייה עתידית"||l.status==="נשלחה הצעת מחיר")return false;
+    if(activeTab==="לידים בתהליך"){
+      if(!isActiveProcessLead(l))return false;
+    }else if(activeTab==="לטיפול היום"){
+      if(!isTodayWorkLead(l))return false;
+    }else if(activeTab==="לא רלוונטי"){
+      if(l.status!=="לא רלוונטי")return false;
+    }else if(activeTab==="נסגר"){
+      if(l.status!=="נסגר")return false;
+    }else if(activeTab==="לפנייה עתידית"){
+      if(l.status!=="לפנייה עתידית")return false;
+    }else if(activeTab==="הצעות"){
+      if(l.status!=="נשלחה הצעת מחיר")return false;
+    }else if(activeTab==="פגישות"){
+      if(l.status!=="נקבעה פגישה")return false;
+    }else if(activeTab==="מתקדם"){
+      if(["בהמתנה לקביעת פגישה","נקבעה פגישה","בהמתנה להצעת מחיר","בהמתנה לשליחת הצעה"].indexOf(l.status)<0)return false;
     }
 
     if(statFilter==="__בטיפול"&&!isActiveProcessLead(l))return false;
@@ -590,10 +566,6 @@ function getFiltered(){
   });
 }
 
-
-
-
-
 function loadTabOrder(defaultTabs){
   try{
     var saved=JSON.parse(localStorage.getItem("misterBeanTabOrder")||"null");
@@ -609,21 +581,7 @@ function saveTabOrder(order){
 
 
 
-function keepActiveTabVisible(){
-  var wrap=document.querySelector(".tabs");
-  if(!wrap)return;
-  var active=wrap.querySelector(".tab.active");
-  if(!active)return;
-
-  setTimeout(function(){
-    try{
-      active.scrollIntoView({behavior:"auto",block:"nearest",inline:"center"});
-    }catch(e){
-      var target=active.offsetLeft-(wrap.clientWidth/2)+(active.clientWidth/2);
-      wrap.scrollLeft=target;
-    }
-  },0);
-}
+function keepActiveTabVisible(){return;}
 
 function render(){
   preserveSearchFocusBeforeRender();
@@ -640,16 +598,15 @@ function render(){
     {label:"לידים בתהליך",value:activeLeads.length,color:"#0052cc",icon:"📋",filter:"__בטיפול"},
     {label:"טרם טופלו",value:leads.filter(function(l){return !l.deleted&&l.status==="לא טופל";}).length,color:"#6b778c",icon:"🕘",filter:"לא טופל"},
     {label:"לטיפול היום",value:leads.filter(function(l){return isTodayWorkLead(l);}).length,color:"#ffab00",icon:"🔔",filter:"__היום"},
-    {label:"משימות פתוחות",value:getAllTasks().filter(function(x){return ["בוצעה","בוטלה"].indexOf(x.task.status)<0;}).length,color:"#0052cc",icon:"✅",filter:"__משימות"},
     {label:"לפנייה עתידית",value:futureCount,color:"#5243aa",icon:"⏰",filter:"לפנייה עתידית"},
     {label:"פגישות",value:leads.filter(function(l){return !l.deleted&&l.status==="נקבעה פגישה";}).length,color:"#6554c0",icon:"📅",filter:"נקבעה פגישה"},
     {label:"הצעות מחיר",value:leads.filter(function(l){return !l.deleted&&l.status==="נשלחה הצעת מחיר";}).length,color:"#00875a",icon:"📨",filter:"נשלחה הצעת מחיר"}
   ];
 
-  var tabs=["משימות","לטיפול היום","לידים בתהליך","מתקדם","פגישות","הצעות","לפנייה עתידית","נסגר","לא רלוונטי","נמחקו"];
+  var tabs=["לטיפול היום","לידים בתהליך","מתקדם","פגישות","הצעות","לפנייה עתידית","נסגר","לא רלוונטי","נמחקו"];
 
   var statsHTML=statsData.map(function(s){
-    var isDashActive=(s.filter==="נשלחה הצעת מחיר"&&activeTab==="הצעות")||(s.filter==="נקבעה פגישה"&&activeTab==="פגישות")||(s.filter==="לפנייה עתידית"&&activeTab==="לפנייה עתידית")||(s.filter==="__היום"&&activeTab==="לטיפול היום")||(s.filter==="__משימות"&&activeTab==="משימות")||(s.filter==="__בטיפול"&&activeTab==="לידים בתהליך")||(statFilter===s.filter&&s.filter);
+    var isDashActive=(s.filter==="נשלחה הצעת מחיר"&&activeTab==="הצעות")||(s.filter==="נקבעה פגישה"&&activeTab==="פגישות")||(s.filter==="לפנייה עתידית"&&activeTab==="לפנייה עתידית")||(s.filter==="__היום"&&activeTab==="לטיפול היום")||(s.filter==="__בטיפול"&&activeTab==="לידים בתהליך")||(statFilter===s.filter&&s.filter);
     var active=isDashActive?'style="border-top:4px solid '+s.color+';box-shadow:0 0 0 2px '+s.color+'"':'style="border-top:4px solid '+s.color+'"';
     return '<div class="stat-card" '+active+' data-stat-filter="'+esc(String(s.filter))+'" onclick="event.stopPropagation();dashboardFilterClick('+JSON.stringify(s.filter)+')">'
       +'<div class="stat-icon">'+s.icon+'</div>'
@@ -689,7 +646,7 @@ function render(){
       +'<td style="direction:ltr;text-align:right">'+phoneHtml+'</td>'
       +'<td style="direction:ltr;text-align:right">'+emailHtml+'</td>'
       +'<td><span class="owner-badge" style="'+ownerStyle(l.owner)+'">'+esc(l.owner)+'</span></td>'
-      +'<td onclick="event.stopPropagation()"><select class="status-select" style="color:'+so.color+';background:'+so.bg+'" onchange="updateStatus('+JSON.stringify(l.id)+',this.value)">'+opts+'</select></td>'
+      +'<td onclick="event.stopPropagation()"><select class="status-select" style="color:'+so.color+';background:'+so.bg+'" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateStatus('+JSON.stringify(l.id)+',this.value)">'+opts+'</select></td>'
       +'<td style="color:#5e6c84;font-size:11px">'+fmtDateTime(l.lastUpdatedAt||l.lastUpdated)+'</td>'
       +'<td style="color:#5e6c84;max-width:200px;overflow:hidden;text-overflow:ellipsis">'+(esc(l.notes)||"—")+'</td>'
       +'</tr>';
@@ -699,8 +656,7 @@ function render(){
     var so=sOpt(l.status);
     var opts=STATUS_OPTIONS.map(function(s){return '<option'+(l.status===s.label?" selected":"")+'>'+s.label+'</option>';}).join("");
     var due=isDue(l.followUpDate)&&l.status!=="נסגר"&&l.status!=="לא רלוונטי";
-    var extra="";var nt=getNextTask(l);
-    if(nt)extra+='<div class="card-row"><span class="card-label">משימה קרובה:</span><span class="card-value">'+esc(nt.title)+(nt.dueDate?" • "+fmtDate(nt.dueDate):"")+'</span></div>';extra+='<div class="card-row"><span class="badge '+pClass(l.priority)+'">'+esc(l.priority)+'</span>'+(l.followUpDate?'<span class="badge" style="background:'+(due?"#fff0b3":"#ebecf0")+';color:'+(due?"#7a5d00":"#42526e")+'">פולואפ: '+fmtDate(l.followUpDate)+'</span>':"")+'</div>';
+    var extra="";extra+='<div class="card-row"><span class="badge '+pClass(l.priority)+'">'+esc(l.priority)+'</span>'+(l.followUpDate?'<span class="badge" style="background:'+(due?"#fff0b3":"#ebecf0")+';color:'+(due?"#7a5d00":"#42526e")+'">פולואפ: '+fmtDate(l.followUpDate)+'</span>':"")+'</div>';
     if(l.employees>0||l.location)extra+='<div class="card-row">'+(l.employees>0?'<span class="card-label">עובדים:</span><span class="card-value">'+Number(l.employees).toLocaleString()+'</span>':"")+(l.location?'<span class="card-label" style="margin-right:8px">📍</span><span class="card-value">'+esc(l.location)+'</span>':"")+'</div>';
     if(l.contact)extra+='<div class="card-row"><span class="card-label">איש קשר:</span><span class="card-value">'+esc(l.contact)+(l.role?" — "+esc(l.role):"")+'</span></div>';
     if(l.nextAction)extra+='<div class="card-row"><span class="card-label">פעולה הבאה:</span><span class="card-value">'+esc(l.nextAction)+"</span></div>";if(l.connection)extra+='<div class="card-row"><span class="card-label">חיבור:</span><span class="card-value">'+esc(l.connection)+'</span></div>';
@@ -711,7 +667,7 @@ function render(){
     return '<div class="card '+(due?"follow-due":"")+'" data-open-id="'+esc(String(l.id))+'" style="border-right-color:'+so.color+'" onclick="openEdit('+JSON.stringify(l.id)+')">'
       +'<div class="card-header"><div class="card-company">'+esc(l.company)+'</div><span class="owner-badge" style="'+ownerStyle(l.owner)+'">'+esc(l.owner)+'</span></div>'
       +extra
-      +'<div onclick="event.stopPropagation()"><select class="mobile-status" style="color:'+so.color+';background:'+so.bg+'" onchange="updateStatus('+JSON.stringify(l.id)+',this.value)">'+opts+'</select></div>'
+      +'<div onclick="event.stopPropagation()"><select class="mobile-status" style="color:'+so.color+';background:'+so.bg+'" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateStatus('+JSON.stringify(l.id)+',this.value)">'+opts+'</select></div>'
       +(l.notes?'<div class="card-notes">📝 '+esc(l.notes)+'</div>':"")
       +'<div style="font-size:11px;color:#6b778c;margin-top:7px">עודכן: '+fmtDateTime(l.lastUpdatedAt||l.lastUpdated)+'</div>'
       +'</div>';
@@ -720,7 +676,7 @@ function render(){
   var syncLabel=lastSync?("עודכן "+lastSync.toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})):"מסונכרן";
   var statLabel=statFilter?(statFilter==="__בטיפול"?"לידים בתהליך":(statFilter==="__היום"?"לטיפול היום":(statFilter==="__פולואפ"?"פולואפ להיום":statFilter))):"";
 
-  var mainContent=activeTab==="משימות"?renderTasksBoard():('<div class="table-wrap"><table><thead><tr>'+thHTML+'</tr></thead><tbody>'+rowsHTML+'</tbody></table></div><div class="cards">'+cardsHTML+'</div>');
+  var mainContent=('<div class="table-wrap"><table><thead><tr>'+thHTML+'</tr></thead><tbody>'+rowsHTML+'</tbody></table></div><div class="cards">'+cardsHTML+'</div>');
   document.getElementById("app").innerHTML=
     '<div class="header"><div><h1>☕ ניהול לידים</h1><p>סביבת עבודה בסגנון Jira • סנכרון ענן</p></div><div class="header-actions"><div class="sync-badge" id="sync-badge" style="color:#79f2c0">✅ '+syncLabel+'</div><div class="user-badge">'+esc((currentUser&&currentUser.email)||"")+'</div><button class="btn-logout" onclick="logoutUser()">יציאה</button><button class="btn-tool" onclick="exportToExcel()">⬇️ ייצוא</button><button class="btn-tool" onclick="triggerImport()">⬆️ ייבוא</button><input id="excel-import-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromExcel(event)"><button class="btn-add" onclick="openAdd()">+ ליד</button></div></div>'
     +'<div class="stats">'+statsHTML+'</div>'
@@ -733,11 +689,18 @@ function render(){
   keepActiveTabVisible();
   
 }
-function setTab(t){activeTab=t;statFilter=null;render();}function setFilterStatus(v){filterStatus=v;render();}function setFilterOwner(v){filterOwner=v;render();}function setSort(k){if(sortKey===k)sortDir=sortDir==="asc"?"desc":"asc";else{sortKey=k;sortDir="asc";}render();}function dashboardFilterClick(f){
+function setTab(t){
+  activeTab=t;
   statFilter=null;
+  if(t==="לידים בתהליך"||t==="הצעות"||t==="פגישות"||t==="מתקדם"||t==="לטיפול היום"||t==="לפנייה עתידית"||t==="נסגר"||t==="לא רלוונטי"||t==="נמחקו"){
+    filterStatus="הכל";
+  }
+  render();
+}function setFilterStatus(v){filterStatus=v;render();}function setFilterOwner(v){filterOwner=v;render();}function setSort(k){if(sortKey===k)sortDir=sortDir==="asc"?"desc":"asc";else{sortKey=k;sortDir="asc";}render();}function dashboardFilterClick(f){
+  statFilter=null;
+  filterStatus="הכל";
 
-  if(f==="__משימות"){activeTab="משימות";
-  }else if(f==="נשלחה הצעת מחיר"){
+  if(f==="נשלחה הצעת מחיר"){
     activeTab="הצעות";
   }else if(f==="נקבעה פגישה"){
     activeTab="פגישות";
@@ -757,7 +720,6 @@ function setTab(t){activeTab=t;statFilter=null;render();}function setFilterStatu
 
   render();
 }
-
 function toggleStatFilter(f){
   dashboardFilterClick(f);
 }
@@ -788,16 +750,14 @@ function populateSelects(){
   var os=document.getElementById("f_owner");
   var ss=document.getElementById("f_status");
   var ps=document.getElementById("f_priority");
-  var tos=document.getElementById("task_owner");
   if(os)os.innerHTML=OWNERS.map(function(o){return "<option>"+o+"</option>";}).join("");
   if(ss)ss.innerHTML=STATUS_OPTIONS.map(function(s){return "<option>"+s.label+"</option>";}).join("");
   if(ps)ps.innerHTML=PRIORITY_OPTIONS.map(function(p){return "<option>"+p+"</option>";}).join("");
-  if(tos)tos.innerHTML=OWNERS.map(function(o){return "<option>"+o+"</option>";}).join("");
 }
 function updateMeetingSection(){var s=document.getElementById("f_status"),sec=document.getElementById("meeting-section");if(!s||!sec)return;sec.style.display=s.value==="נקבעה פגישה"?"block":"none";}
 function g(id){return(document.getElementById(id)||{}).value||"";}
-function openModalUI(){var w=document.getElementById("modal-wrap");if(!w)return;w.classList.add("open");document.body.classList.add("modal-open");document.body.style.overflow="hidden";}
-function closeModal(){var w=document.getElementById("modal-wrap");if(w)w.classList.remove("open");document.body.classList.remove("modal-open");document.body.style.overflow="";currentLead=null;isAdding=false;var b=document.querySelector(".btn-save");if(b){b.disabled=false;b.textContent="💾 שמור";}}
+function openModalUI(){var w=document.getElementById("modal-wrap");if(!w)return;w.classList.add("open");document.body.classList.add("modal-open");}
+function closeModal(){var w=document.getElementById("modal-wrap");if(w)w.classList.remove("open");document.body.classList.remove("modal-open");currentLead=null;isAdding=false;var b=document.querySelector(".btn-save");if(b){b.disabled=false;b.textContent="💾 שמור";}}
 function setForm(l){
   populateSelects();
   var title=document.getElementById("modal-title-text");
@@ -831,92 +791,61 @@ function deleteLead(){if(!currentLead||isAdding)return;if(!confirm("למחוק �
 function updateStatus(id,status){
   var sid=String(id);
   var existing=leads.find(function(l){return String(l.id)===sid;});
+
   if(status==="לפנייה עתידית"&&(!existing||!existing.followUpDate)){
     alert("כדי להעביר ליד לסטטוס לפנייה עתידית צריך לפתוח את הליד ולהזין תאריך פנייה.");
     openEdit(id);
-    setTimeout(function(){var s=document.getElementById("f_status");if(s){s.value="לפנייה עתידית";renderLeadTasks();updateMeetingSection();}},100);
+    setTimeout(function(){
+      var s=document.getElementById("f_status");
+      if(s){
+        s.value="לפנייה עתידית";
+        updateMeetingSection();
+      }
+    },100);
     return;
   }
-  var nl=leads.map(function(l){return String(l.id)===sid?Object.assign({},l,{status:status,lastUpdated:today(),lastUpdatedAt:nowDateTime()}):l;});
+
+  var changed=false;
+  var nl=leads.map(function(l){
+    if(String(l.id)!==sid)return l;
+    changed=true;
+    return normalizeLead(Object.assign({},l,{
+      status:status,
+      lastUpdated:today(),
+      lastUpdatedAt:nowDateTime()
+    }));
+  });
+
+  if(!changed)return;
+
   leads=normalizeLeadsList(nl);
   saveLocalBackup(leads);
+  syncStatus="syncing";
   render();
-  saveLeads(leads).catch(function(){alert("השינוי נשמר מקומית, אבל לא הסתנכרן לענן.");});
+
+  saveLeads(leads).then(function(){
+    syncStatus="ok";
+    lastSync=new Date();
+    updateBadge();
+  }).catch(function(){
+    syncStatus="error";
+    updateBadge();
+    alert("השינוי נשמר מקומית, אבל לא הצליח להסתנכרן לענן.");
+  });
 }
 
-function renderLeadTasks(){
-  var box=document.getElementById("lead-tasks-list");
-  if(!box||!currentLead)return;
-  currentLead=normalizeLead(currentLead);
-  var tasks=currentLead.tasks||[];
-  if(!tasks.length){
-    box.innerHTML='<div style="font-size:12px;color:#6b778c">אין משימות לליד הזה.</div>';
-  }else{
-    box.innerHTML=tasks.slice().sort(function(a,b){
-      var ad=a.dueDate||"9999-12-31",bd=b.dueDate||"9999-12-31";
-      if(ad!==bd)return ad>bd?1:-1;
-      return a.status>b.status?1:-1;
-    }).map(function(t){
-      var due=isTaskDue(t),over=isTaskOverdue(t);
-      return '<div class="lead-task-row" style="'+(over?'background:#ffebe6;padding-right:6px;border-radius:6px':(due?'background:#fff7d6;padding-right:6px;border-radius:6px':''))+'">'
-        +'<div class="lead-task-main"><strong>'+esc(t.title)+'</strong><br><span>'+esc(t.status)+' • '+esc(t.priority)+' • '+esc(t.owner)+(t.dueDate?' • יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+t.dueTime:''):'')+'</span></div>'
-        +'<div class="lead-task-actions">'
-        +'<button class="task-mini-btn" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בטיפול\')">בטיפול</button>'
-        +'<button class="task-mini-btn calendar" onclick="addCurrentLeadTaskToCalendar('+JSON.stringify(t.id)+')">📅 יומן</button>'
-        +'<button class="task-mini-btn done" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בוצעה\')">בוצע</button>'
-        +'<button class="task-mini-btn snooze" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'נדחתה\')">נדחה</button>'
-        +'<button class="task-mini-btn cancel" onclick="updateTaskInCurrentLead('+JSON.stringify(t.id)+',\'בוטלה\')">בוטל</button>'
-        +'</div></div>';
-    }).join("");
-  }
-  var owner=document.getElementById("task_owner");
-  if(owner)owner.value=currentLead.owner||"בועז";
-}
-function addTaskToCurrentLead(){
-  if(!currentLead)return;
-  var title=((document.getElementById("task_title")||{}).value||"").trim();
-  if(!title){alert("נא להזין שם משימה");return;}
-  var t=normalizeTask({
-    title:title,
-    dueDate:(document.getElementById("task_dueDate")||{}).value||"",
-    dueTime:(document.getElementById("task_dueTime")||{}).value||"09:00",
-    priority:(document.getElementById("task_priority")||{}).value||"בינונית",
-    owner:(document.getElementById("task_owner")||{}).value||currentLead.owner||"בועז",
-    status:"פתוחה",
-    createdAt:today(),
-    updatedAt:today()
-  },currentLead);
-  currentLead=normalizeLead(currentLead);
-  currentLead.tasks=(currentLead.tasks||[]).concat([t]);
-  currentLead.lastUpdated=today();currentLead.lastUpdatedAt=nowDateTime();
-  var titleEl=document.getElementById("task_title");if(titleEl)titleEl.value="";
-  var dateEl=document.getElementById("task_dueDate");if(dateEl)dateEl.value="";
-  var timeEl=document.getElementById("task_dueTime");if(timeEl)timeEl.value="09:00";
-  renderLeadTasks();
-}
-function updateTaskInCurrentLead(taskId,status){
-  if(!currentLead)return;
-  currentLead=normalizeLead(currentLead);
-  currentLead.tasks=(currentLead.tasks||[]).map(function(t){
-    return String(t.id)===String(taskId)?Object.assign({},t,{status:status,updatedAt:today(),completedAt:status==="בוצעה"?today():(t.completedAt||"")}):t;
-  });
-  currentLead.lastUpdated=today();currentLead.lastUpdatedAt=nowDateTime();
-  renderLeadTasks();
-}
-function updateTaskGlobal(leadId,taskId,status){
-  leads=leads.map(function(l){
-    if(String(l.id)!==String(leadId))return l;
-    l=normalizeLead(l);
-    l.tasks=(l.tasks||[]).map(function(t){
-      return String(t.id)===String(taskId)?Object.assign({},t,{status:status,updatedAt:today(),completedAt:status==="בוצעה"?today():(t.completedAt||"")}):t;
-    });
-    l.lastUpdated=today();l.lastUpdatedAt=nowDateTime();
-    return l;
-  });
-  saveLocalBackup(leads);
-  render();
-  saveLeads(leads).catch(function(){alert("המשימה נשמרה מקומית, אבל לא הסתנכרנה לענן.");});
-}
+function renderLeadTasks(){return '';}
+
+
+function addTaskToCurrentLead(){return '';}
+
+
+function updateTaskInCurrentLead(taskId,status){return '';}
+
+
+function updateTaskGlobal(leadId,taskId,status){return '';}
+
+
 function resetTaskFilters(){
   taskOwnerFilter="הכל";
   taskStatusQuickFilter="הכל";
@@ -988,92 +917,20 @@ function buildTaskCalendarDescription(lead,task){
     +"עדיפות משימה: "+(task.priority||"")+"\n"
     +"אחראי: "+(task.owner||"");
 }
-function addTaskToCalendar(leadId,taskId){
-  var lead=leads.find(function(l){return String(l.id)===String(leadId);});
-  if(!lead)return;
-  lead=normalizeLead(lead);
-  var task=(lead.tasks||[]).find(function(t){return String(t.id)===String(taskId);});
-  if(!task)return;
-  task=normalizeTask(task,lead);
-  downloadICS("משימה: "+task.title+" - "+lead.company,buildTaskCalendarDescription(lead,task),task.dueDate,task.dueTime||"09:00");
-}
-function addCurrentLeadTaskToCalendar(taskId){
-  if(!currentLead)return;
-  currentLead=normalizeLead(currentLead);
-  var task=(currentLead.tasks||[]).find(function(t){return String(t.id)===String(taskId);});
-  if(!task)return;
-  task=normalizeTask(task,currentLead);
-  downloadICS("משימה: "+task.title+" - "+currentLead.company,buildTaskCalendarDescription(currentLead,task),task.dueDate,task.dueTime||"09:00");
-}
+function addTaskToCalendar(leadId,taskId){return '';}
 
-function renderTasksBoard(){
-  var statuses=["פתוחה","בטיפול","נדחתה","בוצעה","בוטלה"];
-  var tasks=getAllTasks();
 
-  var openTasks=tasks.filter(function(x){return ["בוצעה","בוטלה"].indexOf(x.task.status)<0;});
-  var overdueTasks=openTasks.filter(function(x){return isTaskOverdue(x.task);});
-  var todayTasks=openTasks.filter(function(x){return isTaskDue(x.task)&&!isTaskOverdue(x.task);});
-  var highTasks=openTasks.filter(function(x){return x.task.priority==="גבוהה";});
+function addCurrentLeadTaskToCalendar(taskId){return '';}
 
-  var filteredTasks=tasks.filter(function(x){
-    if(taskOwnerFilter!=="הכל"&&x.task.owner!==taskOwnerFilter)return false;
-    if(taskStatusQuickFilter==="פתוחות"&&["בוצעה","בוטלה"].indexOf(x.task.status)>=0)return false;
-    if(taskStatusQuickFilter==="באיחור"&&!isTaskOverdue(x.task))return false;
-    if(taskStatusQuickFilter==="להיום"&&!(isTaskDue(x.task)&&!isTaskOverdue(x.task)))return false;
-    if(taskStatusQuickFilter==="גבוהה"&&x.task.priority!=="גבוהה")return false;
-    return true;
-  });
 
-  var toolbar='<div class="tasks-toolbar">'
-    +'<span style="font-weight:900;color:#42526e">סינון משימות:</span>'
-    +'<select onchange="taskOwnerFilter=this.value;render()">'
-      +'<option'+(taskOwnerFilter==="הכל"?' selected':'')+'>הכל</option>'
-      +OWNERS.map(function(o){return '<option'+(taskOwnerFilter===o?' selected':'')+'>'+o+'</option>';}).join("")
-    +'</select>'
-    +'<select onchange="taskStatusQuickFilter=this.value;render()">'
-      +["הכל","פתוחות","באיחור","להיום","גבוהה"].map(function(v){return '<option'+(taskStatusQuickFilter===v?' selected':'')+'>'+v+'</option>';}).join("")
-    +'</select>'
-    +'<button onclick="resetTaskFilters()">נקה סינון</button>'
-    +'</div>';
+function renderTasksBoard(){return '';}
 
-  var summary='<div class="tasks-summary">'
-    +'<div class="task-summary-card">משימות פתוחות<span>'+openTasks.length+'</span></div>'
-    +'<div class="task-summary-card">באיחור<span style="color:#de350b">'+overdueTasks.length+'</span></div>'
-    +'<div class="task-summary-card">להיום<span style="color:#ff991f">'+todayTasks.length+'</span></div>'
-    +'<div class="task-summary-card">עדיפות גבוהה<span style="color:#bf2600">'+highTasks.length+'</span></div>'
-    +'</div>';
 
-  var board=statuses.map(function(st){
-    var items=filteredTasks.filter(function(x){return x.task.status===st;}).sort(function(a,b){
-      var ad=a.task.dueDate||"9999-12-31",bd=b.task.dueDate||"9999-12-31";
-      if(ad!==bd)return ad>bd?1:-1;
-      var pa=a.task.priority==="גבוהה"?0:(a.task.priority==="בינונית"?1:2);
-      var pb=b.task.priority==="גבוהה"?0:(b.task.priority==="בינונית"?1:2);
-      return pa-pb;
-    });
-    return '<div class="task-col"><div class="task-col-title"><span>'+st+'</span><span class="task-count">'+items.length+'</span></div>'
-      +(items.length?items.map(function(x){
-        var t=x.task,l=x.lead,over=isTaskOverdue(t),due=isTaskDue(t);
-        return '<div class="task-card '+(over?'overdue':(due?'today':''))+'">'
-          +'<div class="task-title">'+esc(t.title)+'</div>'
-          +'<div class="task-meta">ליד: <a href="#" onclick="event.preventDefault();openEdit('+JSON.stringify(l.id)+')">'+esc(l.company)+'</a><br>אחראי: '+esc(t.owner)+' • עדיפות: '+esc(t.priority)+'<br>'+(t.dueDate?'יעד: '+fmtDate(t.dueDate)+(t.dueTime?' '+t.dueTime:'')+'<br>':'')+'סטטוס ליד: '+esc(l.status)+'</div>'
-          +'<div class="task-actions">'
-          +'<button class="task-mini-btn calendar" onclick="addTaskToCalendar('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+')">📅 יומן</button>'
-          +(st!=="בטיפול"?'<button class="task-mini-btn" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בטיפול\')">בטיפול</button>':'')
-          +(st!=="בוצעה"?'<button class="task-mini-btn done" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בוצעה\')">בוצע</button>':'')
-          +(st!=="נדחתה"?'<button class="task-mini-btn snooze" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'נדחתה\')">נדחה</button>':'')
-          +(st!=="בוטלה"?'<button class="task-mini-btn cancel" onclick="updateTaskGlobal('+JSON.stringify(l.id)+','+JSON.stringify(t.id)+',\'בוטלה\')">בוטל</button>':'')
-          +'</div></div>';
-      }).join(""):'<div style="font-size:12px;color:#6b778c;padding:8px">אין משימות</div>')
-      +'</div>';
-  }).join("");
-  return '<div class="tasks-wrap">'+toolbar+summary+'<div class="task-board">'+board+'</div></div>';
-}
 function buildGCalLink(){var company=g("f_company"),date=g("f_meetingDate"),time=g("f_meetingTime")||"09:00",loc=g("f_meetingLocation"),guest=g("f_meetingGuest");if(!date)return null;var p=date.split("-"),tp=time.split(":"),pad=function(n){return String(n).padStart(2,"0");},start=p[0]+p[1]+p[2]+"T"+pad(tp[0])+pad(tp[1]||"00")+"00",endH=String((parseInt(tp[0],10)+1)%24).padStart(2,"0"),end=p[0]+p[1]+p[2]+"T"+endH+pad(tp[1]||"00")+"00";return"https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent("פגישה — "+company)+"&dates="+start+"/"+end+"&location="+encodeURIComponent(loc)+"&add="+encodeURIComponent(guest)+"&sf=true&output=xml";}
 function openGCal(){var link=buildGCalLink();if(!link){alert("נא להזין תאריך לפגישה");return;}window.open(link,"_blank");}
 function buildICS(){var company=g("f_company")||"פגישה",date=g("f_meetingDate"),time=g("f_meetingTime")||"09:00",loc=g("f_meetingLocation"),guest=g("f_meetingGuest");if(!date){alert("נא להזין תאריך לפגישה");return;}var p=date.split("-"),tp=time.split(":"),pad=function(n){return String(n).padStart(2,"0");},start=p[0]+p[1]+p[2]+"T"+pad(tp[0])+pad(tp[1]||"00")+"00",endH=String((parseInt(tp[0],10)+1)%24).padStart(2,"0"),end=p[0]+p[1]+p[2]+"T"+endH+pad(tp[1]||"00")+"00",att=guest?"ATTENDEE;RSVP=TRUE:mailto:"+guest+"\n":"",ics="BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nUID:"+Date.now()+"@leads\nSUMMARY:פגישה — "+company+"\nDTSTART:"+start+"\nDTEND:"+end+"\nLOCATION:"+loc+"\n"+att+"END:VEVENT\nEND:VCALENDAR",blob=new Blob([ics],{type:"text/calendar"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="פגישה-"+company+".ics";a.click();}
 function safeExcelValue(v){return v===undefined||v===null?"":String(v);}
-function exportToExcel(){var data=leads.filter(function(l){return!l.deleted;}).map(function(l){l=normalizeLead(l);return{"שם חברה":safeExcelValue(l.company),"כמות עובדים":l.employees||"","מיקום":safeExcelValue(l.location),"חיבור":safeExcelValue(l.connection),"איש קשר":safeExcelValue(l.contact),"תפקיד":safeExcelValue(l.role),"טלפון":safeExcelValue(l.phone),"מייל":safeExcelValue(l.email),"אחראי":safeExcelValue(l.owner),"רמת עדיפות":safeExcelValue(l.priority),"תאריך פולואפ":safeExcelValue(l.followUpDate),"מצב קיים":safeExcelValue(l.currentStatus),"סטטוס":safeExcelValue(l.status),"מספר משימות פתוחות":getOpenTasks(l).length,"שעת משימה קרובה":(getNextTask(l)?getNextTask(l).dueTime:""),"הערות":safeExcelValue(l.notes),"האם בחוזה קיים":safeExcelValue(l.hasContract),"ספק":safeExcelValue(l.supplier),"סוג מכונות":safeExcelValue(l.machineType),"כמות מכונות":safeExcelValue(l.machineCount),"צריכה חודשית קיימת/משוערת":safeExcelValue(l.monthlyConsumption),"מחיר לקילו":safeExcelValue(l.pricePerKg),"תאריך עדכון":safeExcelValue(l.lastUpdated),"תאריך ושעת עדכון אחרון":safeExcelValue(l.lastUpdatedAt),"כרטיסייה":safeExcelValue(l.sheet),"תאריך פגישה":safeExcelValue(l.meetingDate),"שעת פגישה":safeExcelValue(l.meetingTime),"מיקום פגישה":safeExcelValue(l.meetingLocation),"מייל לזימון":safeExcelValue(l.meetingGuest)};});if(!data.length){alert("אין לידים לייצוא");return;}if(!window.XLSX){alert("רכיב הייצוא לא נטען. בדוק חיבור אינטרנט.");return;}var ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Leads");XLSX.writeFile(wb,"mister-bean-leads-"+today()+".xlsx");}
+function exportToExcel(){var data=leads.filter(function(l){return!l.deleted;}).map(function(l){l=normalizeLead(l);return{"שם חברה":safeExcelValue(l.company),"כמות עובדים":l.employees||"","מיקום":safeExcelValue(l.location),"חיבור":safeExcelValue(l.connection),"איש קשר":safeExcelValue(l.contact),"תפקיד":safeExcelValue(l.role),"טלפון":safeExcelValue(l.phone),"מייל":safeExcelValue(l.email),"אחראי":safeExcelValue(l.owner),"רמת עדיפות":safeExcelValue(l.priority),"תאריך פולואפ":safeExcelValue(l.followUpDate),"מצב קיים":safeExcelValue(l.currentStatus),"סטטוס":safeExcelValue(l.status),"הערות":safeExcelValue(l.notes),"האם בחוזה קיים":safeExcelValue(l.hasContract),"ספק":safeExcelValue(l.supplier),"סוג מכונות":safeExcelValue(l.machineType),"כמות מכונות":safeExcelValue(l.machineCount),"צריכה חודשית קיימת/משוערת":safeExcelValue(l.monthlyConsumption),"מחיר לקילו":safeExcelValue(l.pricePerKg),"תאריך עדכון":safeExcelValue(l.lastUpdated),"תאריך ושעת עדכון אחרון":safeExcelValue(l.lastUpdatedAt),"כרטיסייה":safeExcelValue(l.sheet),"תאריך פגישה":safeExcelValue(l.meetingDate),"שעת פגישה":safeExcelValue(l.meetingTime),"מיקום פגישה":safeExcelValue(l.meetingLocation),"מייל לזימון":safeExcelValue(l.meetingGuest)};});if(!data.length){alert("אין לידים לייצוא");return;}if(!window.XLSX){alert("רכיב הייצוא לא נטען. בדוק חיבור אינטרנט.");return;}var ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Leads");XLSX.writeFile(wb,"mister-bean-leads-"+today()+".xlsx");}
 function triggerImport(){var input=document.getElementById("excel-import-input");if(input){input.value="";input.click();}}
 function pick(row,names){for(var i=0;i<names.length;i++){if(row[names[i]]!==undefined&&row[names[i]]!==null&&String(row[names[i]]).trim()!=="")return String(row[names[i]]).trim();}return"";}
 function excelDateToISO(v){if(!v)return"";if(typeof v==="number"&&window.XLSX&&XLSX.SSF){var d=XLSX.SSF.parse_date_code(v);if(d)return String(d.y).padStart(4,"0")+"-"+String(d.m).padStart(2,"0")+"-"+String(d.d).padStart(2,"0");}var s=String(v).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){var p=s.split("/");return p[2]+"-"+p[1].padStart(2,"0")+"-"+p[0].padStart(2,"0");}return s;}
