@@ -307,7 +307,7 @@ var OLD_STATUS_MAP={"ממתין לחיבור":"בהמתנה לפרטים","נש�
 var PRIORITY_OPTIONS=["נמוכה","בינונית","גבוהה"];
 var OWNERS=["בועז","בר","בועז/בר","אחר"];
 var TASK_STATUS_OPTIONS=["פתוחה","בטיפול","נדחתה","בוצעה","בוטלה"];
-var leads=[],activeTab="לידים בתהליך",filterStatus="הכל",filterOwner="הכל",search="",sortKey="followUpDate",sortDir="asc",syncStatus="idle",lastSync=null,currentLead=null,isAdding=false,statFilter=null,searchTimer=null,keepSearchFocus=false,keepSearchSelectionStart=0,keepSearchSelectionEnd=0,keepWindowScrollY=0,taskOwnerFilter="הכל",taskStatusQuickFilter="הכל",customTabOrder=null;
+var leads=[],activeTab="לידים בתהליך",filterStatus="הכל",filterOwner="הכל",filterPriority="הכל",search="",sortKey="followUpDate",sortDir="asc",syncStatus="idle",lastSync=null,currentLead=null,isAdding=false,statFilter=null,searchTimer=null,keepSearchFocus=false,keepSearchSelectionStart=0,keepSearchSelectionEnd=0,keepWindowScrollY=0,taskOwnerFilter="הכל",taskStatusQuickFilter="הכל",customTabOrder=null;
 
 function getAuthToken(){
   if(!auth||!auth.currentUser)return Promise.reject(new Error("not authenticated"));
@@ -537,6 +537,7 @@ function getFiltered(){
 
     if(filterStatus!=="הכל"&&l.status!==filterStatus)return false;
     if(filterOwner!=="הכל"&&l.owner!==filterOwner)return false;
+    if(filterPriority!=="הכל"&&l.priority!==filterPriority)return false;
 
     if(search){
       var q=search.toLowerCase();
@@ -681,7 +682,7 @@ function render(){
     '<div class="header"><div><h1>☕ ניהול לידים</h1><p>סביבת עבודה בסגנון Jira • סנכרון ענן</p></div><div class="header-actions"><div class="sync-badge" id="sync-badge" style="color:#79f2c0">✅ '+syncLabel+'</div><div class="user-badge">'+esc((currentUser&&currentUser.email)||"")+'</div><button class="btn-logout" onclick="logoutUser()">יציאה</button><button class="btn-tool" onclick="exportToExcel()">⬇️ ייצוא</button><button class="btn-tool" onclick="triggerImport()">⬆️ ייבוא</button><input id="excel-import-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromExcel(event)"><button class="btn-add" onclick="openAdd()">+ ליד</button></div></div>'
     +'<div class="stats">'+statsHTML+'</div>'
     +'<div class="tabs">'+tabsHTML+'</div>'
-    +'<div class="filters"><input id="search-box" placeholder="🔍 חיפוש..." value="'+esc(search)+'" oninput="setSearch(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><select onchange="setFilterStatus(this.value)"><option'+(filterStatus==="הכל"?" selected":"")+'>הכל</option>'+STATUS_OPTIONS.map(function(s){return '<option'+(filterStatus===s.label?" selected":"")+'>'+s.label+'</option>';}).join("")+'</select><select onchange="setFilterOwner(this.value)"><option'+(filterOwner==="הכל"?" selected":"")+'>הכל</option>'+OWNERS.map(function(o){return '<option'+(filterOwner===o?" selected":"")+'>'+o+'</option>';}).join("")+'</select><span class="count">'+filtered.length+' לידים'+(statLabel?" • "+statLabel:"")+'</span></div>'
+    +'<div class="filters"><input id="search-box" placeholder="🔍 חיפוש..." value="'+esc(search)+'" oninput="setSearch(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><select onchange="setFilterStatus(this.value)"><option'+(filterStatus==="הכל"?" selected":"")+'>הכל</option>'+STATUS_OPTIONS.map(function(s){return '<option'+(filterStatus===s.label?" selected":"")+'>'+s.label+'</option>';}).join("")+'</select><select onchange="setFilterOwner(this.value)"><option'+(filterOwner==="הכל"?" selected":"")+'>הכל</option>'+OWNERS.map(function(o){return '<option'+(filterOwner===o?" selected":"")+'>'+o+'</option>';}).join("")+'</select><select onchange="setFilterPriority(this.value)"><option'+(filterPriority==="הכל"?" selected":"")+'>הכל</option>'+PRIORITY_OPTIONS.map(function(p){return '<option'+(filterPriority===p?" selected":"")+'>'+p+'</option>';}).join("")+'</select><span class="count">'+filtered.length+' לידים'+(statLabel?" • "+statLabel:"")+'</span></div>'
     +mainContent;
 
   updateBadge();
@@ -696,7 +697,7 @@ function setTab(t){
     filterStatus="הכל";
   }
   render();
-}function setFilterStatus(v){filterStatus=v;render();}function setFilterOwner(v){filterOwner=v;render();}function setSort(k){if(sortKey===k)sortDir=sortDir==="asc"?"desc":"asc";else{sortKey=k;sortDir="asc";}render();}function dashboardFilterClick(f){
+}function setFilterStatus(v){filterStatus=v;render();}function setFilterOwner(v){filterOwner=v;render();}function setFilterPriority(v){filterPriority=v;render();}function setSort(k){if(sortKey===k)sortDir=sortDir==="asc"?"desc":"asc";else{sortKey=k;sortDir="asc";}render();}function dashboardFilterClick(f){
   statFilter=null;
   filterStatus="הכל";
 
