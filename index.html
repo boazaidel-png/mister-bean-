@@ -307,7 +307,7 @@ var OLD_STATUS_MAP={"ממתין לחיבור":"בהמתנה לפרטים","נש�
 var PRIORITY_OPTIONS=["נמוכה","בינונית","גבוהה"];
 var OWNERS=["בועז","בר","בועז/בר","אחר"];
 var TASK_STATUS_OPTIONS=["פתוחה","בטיפול","נדחתה","בוצעה","בוטלה"];
-var leads=[],activeTab="לידים בתהליך",filterStatus="הכל",filterOwner="הכל",filterPriority="הכל",search="",sortKey="followUpDate",sortDir="asc",syncStatus="idle",lastSync=null,currentLead=null,isAdding=false,statFilter=null,searchTimer=null,keepSearchFocus=false,keepSearchSelectionStart=0,keepSearchSelectionEnd=0,keepWindowScrollY=0,taskOwnerFilter="הכל",taskStatusQuickFilter="הכל",customTabOrder=null;
+var leads=[],activeTab="לידים בתהליך",filterStatus="הכל",filterOwner="הכל",filterPriority="הכל",search="",sortKey="followUpDate",sortDir="asc",syncStatus="idle",lastSync=null,currentLead=null,isAdding=false,statFilter=null,searchTimer=null,keepSearchFocus=false,keepSearchSelectionStart=0,keepSearchSelectionEnd=0,keepWindowScrollY=0,taskOwnerFilter="הכל",taskStatusQuickFilter="הכל",customTabOrder=null,lastRemoteSnapshot="",smartSyncTimer=null,lastUserActivityAt=0;
 
 function getAuthToken(){
   if(!auth||!auth.currentUser)return Promise.reject(new Error("not authenticated"));
@@ -434,13 +434,103 @@ function processFutureLeads(){
   }
 }
 
-function saveLeads(nl){leads=normalizeLeadsList(nl);saveLocalBackup(leads);syncStatus="syncing";updateBadge();return fbWrite(leads).then(function(){lastSync=new Date();syncStatus="ok";updateBadge();return true;}).catch(function(){syncStatus="error";updateBadge();throw new Error("sync failed");});}
+function saveLeads(nl){
+  leads=normalizeLeadsList(nl);
+  lastRemoteSnapshot=getSnapshotForSync(leads);
+  saveLocalBackup(leads);
+  syncStatus="syncing";
+  updateBadge();
+  return fbWrite(leads).then(function(){
+    lastRemoteSnapshot=getSnapshotForSync(leads);
+    lastSync=new Date();
+    syncStatus="ok";
+    updateBadge();
+    return true;
+  }).catch(function(){
+    syncStatus="error";
+    updateBadge();
+    throw new Error("sync failed");
+  });
+}
 function updateBadge(){var b=document.getElementById("sync-badge");if(!b)return;var ic={idle:"⏳",syncing:"🔄",ok:"✅",error:"❌"},cl={idle:"#deebff",syncing:"#ffab00",ok:"#79f2c0",error:"#ffbdad"},lb={idle:"ממתין",syncing:"שומר...",ok:lastSync?("עודכן "+lastSync.toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})):"מסונכרן",error:"שגיאה"};b.style.color=cl[syncStatus];b.innerHTML=ic[syncStatus]+" "+lb[syncStatus];}
-function init(){
-  if(initStarted)return;initStarted=true;
-  fbRead().then(function(d){leads=normalizeLeadsList((d&&Array.isArray(d))?d:(loadLocalBackup()||[]));saveLocalBackup(leads);lastSync=new Date();syncStatus="ok";processFutureLeads();render();}).catch(function(){leads=normalizeLeadsList(loadLocalBackup()||[]);syncStatus="error";processFutureLeads();render();});
+
+function getSnapshotForSync(data){
+  try{return JSON.stringify(normalizeLeadsList(data||[]));}
+  catch(e){try{return JSON.stringify(data||[]);}catch(err){return "";}}
+}
+function markUserActivity(){
+  lastUserActivityAt=Date.now();
+}
+function isUserBusy(){
+  var modalOpen=document.getElementById("modal-wrap")&&document.getElementById("modal-wrap").classList.contains("open");
+  if(modalOpen)return true;
+
+  var active=document.activeElement;
+  var typing=active&&["INPUT","TEXTAREA","SELECT"].indexOf(active.tagName)>=0;
+  if(typing)return true;
+
+  if(Date.now()-lastUserActivityAt<2500)return true;
+
+  return false;
+}
+function preserveScrollRender(){
+  var x=window.pageXOffset||document.documentElement.scrollLeft||0;
+  var y=window.pageYOffset||document.documentElement.scrollTop||0;
+  render();
+  requestAnimationFrame(function(){window.scrollTo(x,y);});
+}
+function smartSyncOnce(){
+  if(isUserBusy())return;
+
+  fbRead().then(function(d){
+    if(!d||!Array.isArray(d))return;
+
+    var remote=normalizeLeadsList(d);
+    var snap=getSnapshotForSync(remote);
+
+    if(snap && snap!==lastRemoteSnapshot){
+      leads=remote;
+      lastRemoteSnapshot=snap;
+      saveLocalBackup(leads);
+      lastSync=new Date();
+      syncStatus="ok";
+      preserveScrollRender();
+    }else{
+      lastSync=new Date();
+      syncStatus="ok";
+      updateBadge();
+    }
+  }).catch(function(){
+    syncStatus="error";
+    updateBadge();
+  });
+}
+function startSmartSync(){
+  if(smartSyncTimer)return;
+  smartSyncTimer=setInterval(smartSyncOnce,30000);
 }
 
+function init(){
+  if(initStarted)return;
+  initStarted=true;
+  fbRead().then(function(d){
+    leads=normalizeLeadsList((d&&Array.isArray(d))?d:(loadLocalBackup()||[]));
+    lastRemoteSnapshot=getSnapshotForSync(leads);
+    saveLocalBackup(leads);
+    lastSync=new Date();
+    syncStatus="ok";
+    processFutureLeads();
+    render();
+    startSmartSync();
+  }).catch(function(){
+    leads=normalizeLeadsList(loadLocalBackup()||[]);
+    lastRemoteSnapshot=getSnapshotForSync(leads);
+    syncStatus="error";
+    processFutureLeads();
+    render();
+    startSmartSync();
+  });
+}
 function isTodayWorkLead(l){
   l=normalizeLead(l);
   return isActiveProcessLead(l) && (isDue(l.followUpDate) || l.priority==="גבוהה");
@@ -969,6 +1059,13 @@ document.addEventListener("click",function(e){
   }
 });
 
+
+
+document.addEventListener("input",markUserActivity,{passive:true});
+document.addEventListener("change",markUserActivity,{passive:true});
+document.addEventListener("click",markUserActivity,{passive:true});
+document.addEventListener("touchstart",markUserActivity,{passive:true});
+document.addEventListener("wheel",markUserActivity,{passive:true});
 
 populateSelects();
 if(auth){
